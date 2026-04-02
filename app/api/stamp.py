@@ -3,6 +3,7 @@ import uuid
 import shutil
 import threading
 import tempfile
+import time
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from app.auth import verify_auth, validate_id
@@ -35,6 +36,7 @@ class StampRequest(BaseModel):
 
 def _process_stamp(task_id: str, req: StampRequest):
     try:
+        tasks[task_id]["created_at"] = time.time()
         tasks[task_id]["status"] = "processing"
         pdf_path = os.path.join(UPLOAD_DIR, "uploads", f"{req.file_id}.pdf")
         stamp_path = os.path.join(UPLOAD_DIR, "stamps", f"{req.stamp_id}.png")
@@ -106,6 +108,12 @@ async def stamp(
 ):
     validate_id(req.file_id)
     validate_id(req.stamp_id)
+    # Clean up old completed/errored tasks older than 1 hour
+    now = time.time()
+    old_tasks = [tid for tid, t in tasks.items()
+                 if t.get("created_at", 0) < now - 3600 and t.get("status") in ("completed", "error")]
+    for tid in old_tasks:
+        del tasks[tid]
     task_id = uuid.uuid4().hex[:12]
     tasks[task_id] = {"status": "pending", "progress": 0}
     thread = threading.Thread(target=_process_stamp, args=(task_id, req))

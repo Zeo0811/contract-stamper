@@ -1,5 +1,6 @@
 import os
 import random
+import shutil
 import tempfile
 import fitz
 from PIL import Image
@@ -27,11 +28,13 @@ def place_seam_stamps(pdf_path: str, stamp_path: str) -> str:
     doc = fitz.open(pdf_path)
     num_pages = len(doc)
     strips = slice_stamp(stamp_path, num_pages)
+    stamp_img_original = Image.open(stamp_path)
+    stamp_height = stamp_img_original.height
     for i in range(num_pages):
         page = doc[i]
         strip_img = Image.open(strips[i])
         s_width, s_height = strip_img.size
-        scale = 120.0 / Image.open(stamp_path).height
+        scale = 120.0 / stamp_height
         display_w = s_width * scale
         display_h = s_height * scale
         page_w = page.rect.width
@@ -44,7 +47,15 @@ def place_seam_stamps(pdf_path: str, stamp_path: str) -> str:
         y1 = y0 + display_h
         stamp_rect = fitz.Rect(x0, y0, x1, y1)
         page.insert_image(stamp_rect, filename=strips[i], overlay=True)
-    output_path = pdf_path.replace(".pdf", "_seam.pdf")
+    fd, output_path = tempfile.mkstemp(suffix=".pdf")
+    os.close(fd)
     doc.save(output_path)
     doc.close()
+    # Clean up strip temp files
+    for strip_path in strips:
+        if os.path.exists(strip_path):
+            os.unlink(strip_path)
+    strip_dir = os.path.dirname(strips[0]) if strips else None
+    if strip_dir and os.path.exists(strip_dir):
+        shutil.rmtree(strip_dir, ignore_errors=True)
     return output_path

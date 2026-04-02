@@ -5,6 +5,7 @@ import time
 import glob
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
@@ -37,6 +38,13 @@ async def lifespan(app_instance):
 
 
 app = FastAPI(title="Contract Stamper", version="0.1.0", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(upload_router)
 app.include_router(detect_router)
 app.include_router(stamp_router)

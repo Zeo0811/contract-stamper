@@ -1,3 +1,5 @@
+import os
+import tempfile
 import fitz
 
 KEYWORDS = [
@@ -37,7 +39,8 @@ def place_stamp(pdf_path: str, stamp_path: str, page_num: int, x: float, y: floa
     half = size_pt / 2
     stamp_rect = fitz.Rect(x - half, y - half, x + half, y + half)
     page.insert_image(stamp_rect, filename=stamp_path, overlay=True)
-    output_path = pdf_path.replace(".pdf", "_stamped.pdf")
+    fd, output_path = tempfile.mkstemp(suffix=".pdf")
+    os.close(fd)
     doc.save(output_path)
     doc.close()
     return output_path

@@ -1,6 +1,7 @@
 import os
 import uuid
 import shutil
+import asyncio
 from fastapi import APIRouter, UploadFile, File, Depends
 from app.auth import verify_auth
 from app.config import UPLOAD_DIR
@@ -20,8 +21,8 @@ async def upload_pdf(
     file_path = os.path.join(upload_dir, f"{file_id}.pdf")
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
-    page_count = get_page_count(file_path)
-    previews = render_all_previews(file_path)
+    page_count = await asyncio.to_thread(get_page_count, file_path)
+    previews = await asyncio.to_thread(render_all_previews, file_path)
     preview_urls = [f"/api/v1/preview/{os.path.basename(p)}" for p in previews]
     return {"file_id": file_id, "page_count": page_count, "previews": preview_urls}
 
