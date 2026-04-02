@@ -6,8 +6,15 @@ import fitz
 from PIL import Image
 
 
+MAX_STAMP_PX = 500  # Max stamp dimension before slicing
+
+
 def slice_stamp(stamp_path: str, num_pages: int) -> list[str]:
     img = Image.open(stamp_path).convert("RGBA")
+    w, h = img.size
+    if max(w, h) > MAX_STAMP_PX:
+        scale = MAX_STAMP_PX / max(w, h)
+        img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
     width, height = img.size
     strip_width = width // num_pages
     strips = []
@@ -49,7 +56,7 @@ def place_seam_stamps(pdf_path: str, stamp_path: str) -> str:
         page.insert_image(stamp_rect, filename=strips[i], overlay=True)
     fd, output_path = tempfile.mkstemp(suffix=".pdf")
     os.close(fd)
-    doc.save(output_path)
+    doc.save(output_path, deflate=True, garbage=4)
     doc.close()
     # Clean up strip temp files
     for strip_path in strips:
