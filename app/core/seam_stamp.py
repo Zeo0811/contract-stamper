@@ -16,7 +16,7 @@ def slice_stamp(stamp_path: str, num_pages: int) -> list[str]:
         left = i * strip_width
         right = left + strip_width if i < num_pages - 1 else width
         strip = img.crop((left, 0, right, height))
-        angle = random.uniform(-0.5, 0.5)
+        angle = random.uniform(-1.5, 1.5)
         strip = strip.rotate(angle, expand=True, fillcolor=(0, 0, 0, 0))
         strip_path_out = os.path.join(tmp_dir, f"strip_{i}.png")
         strip.save(strip_path_out)
@@ -39,8 +39,8 @@ def place_seam_stamps(pdf_path: str, stamp_path: str) -> str:
         display_h = s_height * scale
         page_w = page.rect.width
         page_h = page.rect.height
-        v_offset = random.uniform(-3, 3)
-        h_offset = random.uniform(-2, 2)
+        v_offset = random.uniform(-8, 8)
+        h_offset = random.uniform(-4, 4)
         x0 = page_w - display_w + h_offset
         y0 = (page_h - display_h) / 2 + v_offset
         x1 = page_w + h_offset
