@@ -5,7 +5,7 @@ import threading
 import tempfile
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from app.auth import verify_api_key
+from app.auth import verify_auth
 from app.config import UPLOAD_DIR
 from app.core.stamp_placer import place_stamp
 from app.core.seam_stamp import place_seam_stamps
@@ -102,7 +102,7 @@ def _process_stamp(task_id: str, req: StampRequest):
 @router.post("/stamp")
 async def stamp(
     req: StampRequest,
-    _: str = Depends(verify_api_key),
+    _: str = Depends(verify_auth),
 ):
     task_id = uuid.uuid4().hex[:12]
     tasks[task_id] = {"status": "pending", "progress": 0}

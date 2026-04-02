@@ -2,7 +2,7 @@ import os
 import uuid
 import shutil
 from fastapi import APIRouter, UploadFile, File, Depends
-from app.auth import verify_api_key
+from app.auth import verify_auth
 from app.config import UPLOAD_DIR
 from app.core.pdf_processor import get_page_count, render_all_previews
 
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/v1")
 @router.post("/upload")
 async def upload_pdf(
     file: UploadFile = File(...),
-    _: str = Depends(verify_api_key),
+    _: str = Depends(verify_auth),
 ):
     file_id = uuid.uuid4().hex[:12]
     upload_dir = os.path.join(UPLOAD_DIR, "uploads")
@@ -29,7 +29,7 @@ async def upload_pdf(
 @router.post("/upload/stamp")
 async def upload_stamp(
     file: UploadFile = File(...),
-    _: str = Depends(verify_api_key),
+    _: str = Depends(verify_auth),
 ):
     stamp_id = uuid.uuid4().hex[:12]
     stamp_dir = os.path.join(UPLOAD_DIR, "stamps")

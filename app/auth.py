@@ -13,6 +13,18 @@ async def verify_api_key(
     return credentials.credentials
 
 
+async def verify_auth(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+):
+    """Accept either API key (Bearer token) or web session cookie."""
+    if credentials and credentials.credentials == API_KEY:
+        return True
+    if verify_web_password(request):
+        return True
+    raise HTTPException(status_code=401, detail="Authentication required")
+
+
 def verify_web_password(request: Request) -> bool:
     session_token = request.cookies.get("session_token")
     if session_token == WEB_PASSWORD:
