@@ -13,10 +13,19 @@ router = APIRouter(prefix="/api/v1")
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc"}
 
 
+def _find_libreoffice() -> str:
+    """Find LibreOffice binary (libreoffice on Linux, soffice on macOS)."""
+    for cmd in ["libreoffice", "soffice"]:
+        if shutil.which(cmd):
+            return cmd
+    raise RuntimeError("LibreOffice not found. Install it to convert Word documents.")
+
+
 def _convert_word_to_pdf(word_path: str, output_dir: str) -> str:
     """Convert Word document to PDF using LibreOffice headless."""
+    lo_bin = _find_libreoffice()
     result = subprocess.run(
-        ["libreoffice", "--headless", "--convert-to", "pdf", "--outdir", output_dir, word_path],
+        [lo_bin, "--headless", "--convert-to", "pdf", "--outdir", output_dir, word_path],
         capture_output=True, text=True, timeout=60,
     )
     if result.returncode != 0:

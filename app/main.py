@@ -83,6 +83,19 @@ async def login(password: str = Form(...)):
     return response
 
 
+@app.get("/api/v1/stamps/list")
+async def list_preset_stamps():
+    """List all preset stamp images from static/stamps directory."""
+    stamps_dir = os.path.join(os.path.dirname(__file__), "static", "stamps")
+    os.makedirs(stamps_dir, exist_ok=True)
+    stamps = []
+    for f in sorted(os.listdir(stamps_dir)):
+        if f.lower().endswith(('.png', '.jpg', '.jpeg')):
+            name = os.path.splitext(f)[0]
+            stamps.append({"name": name, "filename": f, "url": f"/static/stamps/{f}"})
+    return {"stamps": stamps}
+
+
 @app.get("/api/v1/preview/{filename}")
 async def serve_preview(filename: str):
     if not re.match(r'^[a-zA-Z0-9._-]+$', filename):

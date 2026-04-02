@@ -28,6 +28,7 @@ body {
     min-height: 100vh;
 }
 
+/* ── Login ── */
 .login-overlay {
     position: fixed; inset: 0;
     background: rgba(0,0,0,.35);
@@ -46,13 +47,19 @@ body {
     animation: scaleIn .25s ease;
 }
 
+.login-logo {
+    width: 64px; height: 64px;
+    margin-bottom: 16px;
+    border-radius: var(--radius-md);
+}
+
 @keyframes scaleIn {
     from { opacity: 0; transform: scale(.9); }
     to { opacity: 1; transform: scale(1); }
 }
 
 .login-card h2 {
-    font-size: 24px; font-weight: 700; margin-bottom: 4px; color: var(--green);
+    font-size: 22px; font-weight: 700; margin-bottom: 4px; color: var(--green);
 }
 
 .login-subtitle { color: var(--gray); font-size: 14px; margin-bottom: 28px; }
@@ -71,6 +78,7 @@ body {
 
 .error-text { color: #d32; font-size: 13px; margin-top: 12px; }
 
+/* ── Buttons ── */
 .btn-primary {
     background: linear-gradient(135deg, var(--green), var(--green-dark));
     color: #fff; border: none; border-radius: var(--radius-sm);
@@ -93,13 +101,33 @@ body {
 }
 
 .btn-secondary {
-    width: 100%; padding: 12px; background: var(--green-light); color: var(--green);
+    flex: 1; padding: 11px 8px; background: var(--green-light); color: var(--green);
     border: 1px solid var(--green-border); border-radius: var(--radius-sm);
-    font-size: 15px; font-weight: 600; cursor: pointer;
-    transition: background var(--transition); font-family: var(--font); margin-top: 8px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: background var(--transition); font-family: var(--font);
 }
 
 .btn-secondary:hover { background: var(--green-border); }
+
+.action-main {
+    display: flex; gap: 8px; align-items: stretch;
+}
+
+.action-main .btn-process { flex: 1; }
+
+.btn-process.download {
+    background: linear-gradient(135deg, #2d7d46, #1a5c30);
+}
+
+.btn-reset {
+    width: 44px; min-width: 44px; background: var(--gray-light); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); cursor: pointer; display: flex;
+    align-items: center; justify-content: center; color: var(--gray);
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+    font-family: var(--font);
+}
+
+.btn-reset:hover { background: var(--green-light); color: var(--green); border-color: var(--green-border); }
 
 .btn-text {
     background: none; border: none; color: var(--green); font-size: 13px;
@@ -116,20 +144,27 @@ body {
 
 .btn-icon:hover { background: var(--border); }
 
+/* ── Header ── */
 .app-header {
     background: linear-gradient(135deg, var(--green), var(--green-dark));
-    color: #fff; padding: 16px 24px; display: flex; align-items: baseline; gap: 12px;
+    color: #fff; padding: 12px 24px; display: flex; align-items: center; gap: 12px;
 }
 
-.app-header h1 { font-size: 20px; font-weight: 700; }
-.header-subtitle { font-size: 13px; opacity: .8; }
+.header-logo {
+    width: 32px; height: 32px; border-radius: 6px;
+}
 
+.app-header h1 { font-size: 18px; font-weight: 700; }
+.header-subtitle { font-size: 13px; opacity: .7; }
+
+/* ── Main Layout ── */
 .app-main { display: flex; gap: 0; height: calc(100vh - 56px); }
 
+/* ── Control Panel ── */
 .control-panel {
     width: 340px; min-width: 340px; background: var(--card);
     border-right: 1px solid var(--border); padding: 20px; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 20px;
+    display: flex; flex-direction: column; gap: 18px;
 }
 
 .panel-section { display: flex; flex-direction: column; gap: 10px; }
@@ -139,6 +174,7 @@ body {
     letter-spacing: .5px; color: var(--gray);
 }
 
+/* ── Upload Zone ── */
 .upload-zone {
     border: 2px dashed var(--border); border-radius: var(--radius-md);
     padding: 20px; text-align: center; cursor: pointer;
@@ -165,6 +201,33 @@ body {
 
 .stamp-preview { width: 48px; height: 48px; object-fit: contain; border-radius: 4px; }
 
+/* ── Stamp Grid ── */
+.stamp-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+
+.stamp-loading { grid-column: 1 / -1; text-align: center; color: var(--gray); font-size: 13px; padding: 12px; }
+.stamp-empty { grid-column: 1 / -1; text-align: center; color: var(--gray); font-size: 13px; padding: 12px; }
+
+.stamp-card {
+    border: 2px solid var(--border); border-radius: var(--radius-sm);
+    padding: 8px; text-align: center; cursor: pointer;
+    transition: border-color var(--transition), background var(--transition);
+}
+
+.stamp-card:hover { border-color: var(--green-border); background: var(--green-light); }
+.stamp-card.selected { border-color: var(--green); background: var(--green-light); }
+
+.stamp-card img {
+    width: 56px; height: 56px; object-fit: contain;
+}
+
+.stamp-card-name {
+    font-size: 11px; color: var(--gray); margin-top: 4px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── Settings ── */
 .setting-row {
     display: flex; align-items: center; justify-content: space-between;
     gap: 10px; font-size: 14px;
@@ -172,6 +235,7 @@ body {
 
 .slider { flex: 1; max-width: 140px; accent-color: var(--green); }
 
+/* ── Toggle Switch ── */
 .toggle { position: relative; width: 44px; height: 24px; display: inline-block; }
 .toggle input { display: none; }
 
@@ -189,6 +253,7 @@ body {
 .toggle input:checked + .toggle-slider { background: var(--green); }
 .toggle input:checked + .toggle-slider::after { transform: translateX(20px); }
 
+/* ── Status Bar ── */
 .status-bar {
     padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px;
     font-family: var(--font-mono);
@@ -198,6 +263,45 @@ body {
 .status-bar.success { background: var(--green-light); color: var(--green); }
 .status-bar.error { background: #fef2f2; color: #d32; }
 
+/* ── History List ── */
+.history-list {
+    max-height: 200px; overflow-y: auto;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+
+.history-empty {
+    padding: 16px; text-align: center; color: var(--gray); font-size: 13px;
+}
+
+.history-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px;
+    transition: background var(--transition);
+}
+
+.history-item:last-child { border-bottom: none; }
+.history-item:hover { background: var(--gray-light); }
+
+.history-name {
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--dark); font-weight: 500;
+}
+
+.history-time {
+    color: var(--gray); font-size: 11px; font-family: var(--font-mono);
+    margin: 0 8px;
+    white-space: nowrap;
+}
+
+.history-dl {
+    background: none; border: none; color: var(--green); font-size: 12px;
+    cursor: pointer; font-family: var(--font); text-decoration: underline;
+    white-space: nowrap;
+}
+
+/* ── Preview Panel ── */
 .preview-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 .preview-header {
@@ -216,6 +320,7 @@ body {
 
 #pdfCanvas { box-shadow: var(--shadow-card); border-radius: 2px; max-width: 100%; }
 
+/* ── Stamp Marker ── */
 .stamp-marker { position: absolute; cursor: move; z-index: 10; }
 
 .stamp-marker-ring {
@@ -225,9 +330,27 @@ body {
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
+/* ── Fireworks ── */
+#fireworks {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 9999; cursor: pointer; display: none;
+    background: transparent;
+}
+#fireworks.active { display: block; }
+.fw-hint {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.6); font-size: 14px; z-index: 10000;
+    pointer-events: none; display: none; letter-spacing: 1px;
+}
+#fireworks.active + .fw-hint { display: block; }
+
+/* ── Mobile ── */
 @media (max-width: 768px) {
     .app-main { flex-direction: column-reverse; height: auto; }
-    .control-panel { width: 100%; min-width: unset; border-right: none; border-top: 1px solid var(--border); max-height: 50vh; }
+    .control-panel {
+        width: 100%; min-width: unset; border-right: none;
+        border-top: 1px solid var(--border); max-height: 50vh;
+    }
     .login-card {
         margin: 0 16px; border-radius: 20px 20px 0 0;
         position: fixed; bottom: 0; left: 0; right: 0; width: auto;

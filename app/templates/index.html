@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contract Stamper</title>
+    <title>十字路口 · 法务助手</title>
+    <link rel="icon" href="/static/logo.png">
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
 <body>
+    <!-- Login overlay -->
     {% if not authenticated %}
     <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
-            <h2>Contract Stamper</h2>
+            <img src="/static/logo.png" alt="Logo" class="login-logo">
+            <h2>十字路口 · 法务助手</h2>
             <p class="login-subtitle">请输入访问密码</p>
             <form method="POST" action="/login" class="login-form">
                 <input type="password" name="password" placeholder="密码" class="input-field" autofocus>
@@ -27,12 +30,15 @@
 
     {% if authenticated %}
     <header class="app-header">
-        <h1>Contract Stamper</h1>
+        <img src="/static/logo.png" alt="Logo" class="header-logo">
+        <h1>十字路口 · 法务助手</h1>
         <span class="header-subtitle">合同自动盖章工具</span>
     </header>
 
     <main class="app-main">
+        <!-- Left panel: Controls -->
         <aside class="control-panel">
+            <!-- Upload PDF/Word -->
             <section class="panel-section">
                 <label class="section-label">合同文件</label>
                 <div class="upload-zone" id="pdfUploadZone">
@@ -48,21 +54,15 @@
                 </div>
             </section>
 
+            <!-- Stamp Selection -->
             <section class="panel-section">
-                <label class="section-label">印章图片</label>
-                <div class="upload-zone" id="stampUploadZone">
-                    <input type="file" id="stampInput" accept=".png" hidden>
-                    <div class="upload-placeholder" id="stampPlaceholder">
-                        <span class="upload-icon">&#128308;</span>
-                        <span>拖拽或点击上传印章 PNG</span>
-                    </div>
-                    <div class="upload-done" id="stampDone" hidden>
-                        <img id="stampPreview" class="stamp-preview" alt="stamp">
-                        <button class="btn-text" id="stampClear">更换</button>
-                    </div>
+                <label class="section-label">选择印章</label>
+                <div class="stamp-grid" id="stampGrid">
+                    <div class="stamp-loading">加载印章中...</div>
                 </div>
             </section>
 
+            <!-- Stamp Settings -->
             <section class="panel-section">
                 <label class="section-label">盖章设置</label>
                 <div class="setting-row">
@@ -79,6 +79,7 @@
                 </div>
             </section>
 
+            <!-- Scan Effect -->
             <section class="panel-section">
                 <label class="section-label">扫描效果</label>
                 <div class="setting-row">
@@ -88,19 +89,34 @@
                 </div>
             </section>
 
+            <!-- Actions -->
             <section class="panel-section">
-                <button class="btn-primary btn-process" id="processBtn" disabled>
-                    <span class="btn-text-inner">开始处理</span>
-                    <div class="btn-progress" id="btnProgress"></div>
-                </button>
-                <button class="btn-secondary" id="downloadBtn" hidden>下载结果 PDF</button>
+                <div class="action-main">
+                    <button class="btn-primary btn-process" id="processBtn" disabled>
+                        <span class="btn-text-inner" id="processBtnText">开始处理</span>
+                        <div class="btn-progress" id="btnProgress"></div>
+                    </button>
+                    <button class="btn-reset" id="newTaskBtn" hidden title="重新开始">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 0 1 10.3-4.2l-1.8 1.8H15V1.1l-1.7 1.7A8 8 0 1 0 15.9 9H14a6 6 0 0 1-12-1Z" fill="currentColor"/></svg>
+                    </button>
+                </div>
             </section>
 
+            <!-- Status -->
             <div class="status-bar" id="statusBar" hidden>
                 <span id="statusText"></span>
             </div>
+
+            <!-- History -->
+            <section class="panel-section">
+                <label class="section-label">处理记录</label>
+                <div class="history-list" id="historyList">
+                    <div class="history-empty">暂无记录</div>
+                </div>
+            </section>
         </aside>
 
+        <!-- Right panel: PDF Preview -->
         <section class="preview-panel">
             <div class="preview-header">
                 <span id="previewTitle">上传合同以预览</span>
@@ -118,9 +134,11 @@
             </div>
         </section>
     </main>
-    {% endif %}
 
-    {% if authenticated %}
+    <!-- Fireworks canvas -->
+    <canvas id="fireworks" onclick="stopFireworks()"></canvas>
+    <div class="fw-hint">点击任意位置关闭</div>
+
     <script src="/static/js/app.js"></script>
     {% endif %}
 </body>
