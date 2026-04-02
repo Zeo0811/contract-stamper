@@ -283,6 +283,26 @@ body {
 
 .slider { flex: 1; max-width: 140px; accent-color: var(--green); }
 
+/* ── Party Toggle ── */
+.party-toggle {
+    display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.party-btn {
+    padding: 5px 16px; border: none; background: var(--card); color: var(--gray);
+    font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font);
+    transition: all var(--transition);
+}
+
+.party-btn + .party-btn { border-left: 1px solid var(--border); }
+
+.party-btn.active {
+    background: var(--green); color: #fff;
+}
+
+.party-btn:hover:not(.active) { background: var(--green-light); color: var(--green); }
+
 /* ── Toggle Switch ── */
 .toggle { position: relative; width: 44px; height: 24px; display: inline-block; }
 .toggle input { display: none; }

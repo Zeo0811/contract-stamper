@@ -264,9 +264,28 @@
         }
     }
 
+    // ── Party toggle ──
+    let currentParty = '乙方';
+    const partyToggle = document.getElementById('partyToggle');
+    partyToggle.addEventListener('click', async e => {
+        const btn = e.target.closest('.party-btn');
+        if (!btn || btn.classList.contains('active')) return;
+        partyToggle.querySelectorAll('.party-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentParty = btn.dataset.party;
+        // Re-detect if file is already uploaded
+        if (fileId) {
+            detectedPosition = null;
+            manualPosition = null;
+            stampMarker.hidden = true;
+            await detectKeywords();
+            checkReady();
+        }
+    });
+
     // ── Keyword detection ──
     async function detectKeywords() {
-        const resp = await api('POST', '/api/v1/detect', { file_id: fileId });
+        const resp = await api('POST', '/api/v1/detect', { file_id: fileId, party: currentParty });
         const data = await resp.json();
         if (data.found && data.positions.length > 0) {
             detectedPosition = data.positions[0];

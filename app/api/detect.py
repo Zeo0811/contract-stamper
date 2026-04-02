@@ -10,6 +10,7 @@ router = APIRouter(prefix="/api/v1")
 
 class DetectRequest(BaseModel):
     file_id: str
+    party: str = "乙方"
 
 
 @router.post("/detect")
@@ -21,5 +22,5 @@ async def detect(
     pdf_path = os.path.join(UPLOAD_DIR, "uploads", f"{req.file_id}.pdf")
     if not os.path.exists(pdf_path):
         raise HTTPException(status_code=404, detail="File not found")
-    positions = detect_keywords(pdf_path)
+    positions = detect_keywords(pdf_path, party=req.party)
     return {"found": len(positions) > 0, "positions": positions}

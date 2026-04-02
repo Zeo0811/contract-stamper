@@ -2,22 +2,25 @@ import os
 import tempfile
 import fitz
 
-KEYWORDS = [
-    "乙方（盖章）",
-    "乙方签章",
-    "乙方（签字/盖章）",
-    "乙方（签字盖章）",
-    "乙方(盖章)",
-    "乙方(签字/盖章)",
-]
+KEYWORDS_BY_PARTY = {
+    "乙方": [
+        "乙方（盖章）", "乙方签章", "乙方（签字/盖章）",
+        "乙方（签字盖章）", "乙方(盖章)", "乙方(签字/盖章)",
+    ],
+    "甲方": [
+        "甲方（盖章）", "甲方签章", "甲方（签字/盖章）",
+        "甲方（签字盖章）", "甲方(盖章)", "甲方(签字/盖章)",
+    ],
+}
 
 
-def detect_keywords(pdf_path: str) -> list[dict]:
+def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
+    keywords = KEYWORDS_BY_PARTY.get(party, KEYWORDS_BY_PARTY["乙方"])
     doc = fitz.open(pdf_path)
     results = []
     for page_num in range(len(doc)):
         page = doc[page_num]
-        for keyword in KEYWORDS:
+        for keyword in keywords:
             rects = page.search_for(keyword)
             for rect in rects:
                 results.append({
