@@ -4,12 +4,12 @@ import shutil
 from datetime import date
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from app.auth import require_admin, list_users, create_user, delete_user
-from app.config import UPLOAD_DIR
+from app.config import DATA_DIR
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
-STAMPS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "stamps")
-STAMPS_META_FILE = os.path.join(UPLOAD_DIR, "stamps_meta.json")
+STAMPS_DIR = os.path.join(DATA_DIR, "stamps")
+STAMPS_META_FILE = os.path.join(DATA_DIR, "stamps_meta.json")
 
 
 def _load_stamps_meta() -> list[dict]:
@@ -76,7 +76,7 @@ async def admin_list_stamps(user=Depends(require_admin)):
             "filename": m["filename"],
             "company": m.get("company", ""),
             "created_at": m.get("created_at", ""),
-            "url": f"/static/stamps/{m['filename']}",
+            "url": f"/stamps/files/{m['filename']}",
         })
     return {"stamps": stamps}
 
@@ -111,7 +111,7 @@ async def admin_upload_stamp(
         "created_at": str(date.today()),
     })
     _save_stamps_meta(meta)
-    return {"filename": filename, "company": company, "url": f"/static/stamps/{filename}"}
+    return {"filename": filename, "company": company, "url": f"/stamps/files/{filename}"}
 
 
 @router.delete("/stamps/{filename}")

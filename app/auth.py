@@ -6,14 +6,14 @@ import secrets
 import time
 from fastapi import Depends, HTTPException, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.config import API_KEY, UPLOAD_DIR
+from app.config import API_KEY, DATA_DIR
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
 # In-memory session store: token -> {username, role, created_at}
 active_sessions: dict[str, dict] = {}
 
-USERS_FILE = os.path.join(UPLOAD_DIR, "users.json")
+USERS_FILE = os.path.join(DATA_DIR, "users.json")
 TOKEN_TTL = 86400  # 24 hours
 
 
@@ -39,7 +39,7 @@ def _save_users(users: list[dict]):
 
 def init_users():
     """Ensure default admin user exists."""
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
     users = _load_users()
     admin_exists = any(u["username"] == "admin" for u in users)
     if not admin_exists:

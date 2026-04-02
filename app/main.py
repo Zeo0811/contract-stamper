@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
-from app.config import UPLOAD_DIR, FILE_TTL_SECONDS
+from app.config import UPLOAD_DIR, DATA_DIR, FILE_TTL_SECONDS
 from app.auth import (
     get_current_user, authenticate, init_users, require_auth,
     verify_auth, active_sessions,
@@ -62,18 +62,32 @@ os.makedirs(os.path.join(UPLOAD_DIR, "uploads"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "stamps"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "results"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "previews"), exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(os.path.join(DATA_DIR, "stamps"), exist_ok=True)
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
-STAMPS_META_FILE = os.path.join(UPLOAD_DIR, "stamps_meta.json")
+STAMPS_META_FILE = os.path.join(DATA_DIR, "stamps_meta.json")
+DATA_STAMPS_DIR = os.path.join(DATA_DIR, "stamps")
 
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/stamps/files/{filename}")
+async def serve_stamp_file(filename: str):
+    """Serve stamp images from persistent DATA_DIR."""
+    if not re.match(r'^[a-zA-Z0-9._-]+$', filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    path = os.path.join(DATA_STAMPS_DIR, filename)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404)
+    return FileResponse(path)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -148,9 +162,8 @@ async def admin_page(request: Request):
 
 @app.get("/api/v1/stamps/list")
 async def list_preset_stamps():
-    """List all preset stamp images from static/stamps directory, with company metadata."""
-    stamps_dir = os.path.join(os.path.dirname(__file__), "static", "stamps")
-    os.makedirs(stamps_dir, exist_ok=True)
+    """List all preset stamp images from DATA_DIR/stamps, with company metadata."""
+    os.makedirs(DATA_STAMPS_DIR, exist_ok=True)
 
     # Load metadata
     meta = []
@@ -160,7 +173,7 @@ async def list_preset_stamps():
     meta_map = {m["filename"]: m for m in meta}
 
     stamps = []
-    for f in sorted(os.listdir(stamps_dir)):
+    for f in sorted(os.listdir(DATA_STAMPS_DIR)):
         if f.lower().endswith(('.png', '.jpg', '.jpeg')):
             m = meta_map.get(f, {})
             name = m.get("company", os.path.splitext(f)[0])
@@ -168,7 +181,7 @@ async def list_preset_stamps():
                 "name": name,
                 "company": name,
                 "filename": f,
-                "url": f"/static/stamps/{f}",
+                "url": f"/stamps/files/{f}",
             })
     return {"stamps": stamps}
 
