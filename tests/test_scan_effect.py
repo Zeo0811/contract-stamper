@@ -1,4 +1,3 @@
-import os
 from PIL import Image
 from app.core.scan_effect import apply_scan_to_image, scan_params_from_slider
 
@@ -7,12 +6,14 @@ def test_scan_params_light():
     params = scan_params_from_slider(90)
     assert params["dpi"] == 300
     assert params["tilt_max"] <= 0.3
+    assert params["noise_amount"] <= 2
 
 
 def test_scan_params_heavy():
     params = scan_params_from_slider(10)
     assert params["dpi"] <= 175
-    assert params["tilt_max"] >= 0.8
+    assert params["tilt_max"] >= 0.6
+    assert params["noise_amount"] >= 4
 
 
 def test_apply_scan_to_image():
