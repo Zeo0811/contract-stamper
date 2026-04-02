@@ -1,9 +1,13 @@
 import os
+import asyncio
+import time
+import glob
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
-from app.config import UPLOAD_DIR, WEB_PASSWORD
+from app.config import UPLOAD_DIR, WEB_PASSWORD, FILE_TTL_SECONDS
 from app.auth import verify_web_password, set_web_session
 
 from app.api.upload import router as upload_router
@@ -11,7 +15,27 @@ from app.api.detect import router as detect_router
 from app.api.stamp import router as stamp_router
 from app.api.result import router as result_router
 
-app = FastAPI(title="Contract Stamper", version="0.1.0")
+async def cleanup_old_files():
+    while True:
+        await asyncio.sleep(300)
+        now = time.time()
+        for directory in ["uploads", "stamps", "results", "previews"]:
+            dir_path = os.path.join(UPLOAD_DIR, directory)
+            if not os.path.exists(dir_path):
+                continue
+            for filepath in glob.glob(os.path.join(dir_path, "*")):
+                if now - os.path.getmtime(filepath) > FILE_TTL_SECONDS:
+                    os.remove(filepath)
+
+
+@asynccontextmanager
+async def lifespan(app_instance):
+    task = asyncio.create_task(cleanup_old_files())
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="Contract Stamper", version="0.1.0", lifespan=lifespan)
 app.include_router(upload_router)
 app.include_router(detect_router)
 app.include_router(stamp_router)
