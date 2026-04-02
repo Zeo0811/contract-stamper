@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 · 十字路口</title>
+    <link rel="icon" href="/static/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="admin-body">
+    <header class="app-header">
+        <div class="header-left">
+            <img src="/static/logo.png" alt="Logo" class="header-logo">
+            <h1>十字路口 · 法务助手</h1>
+            <span class="admin-header-badge">管理后台</span>
+        </div>
+        <div class="header-right">
+            <a href="/" class="header-back-link">返回主页</a>
+            <button class="header-logout" id="logoutBtn">退出</button>
+        </div>
+    </header>
+
+    <div class="admin-container" id="adminContainer">
+        <!-- Access denied screen (hidden by default) -->
+        <div class="admin-denied" id="adminDenied" hidden>
+            <h2>需要管理员权限</h2>
+            <p>您的账号没有管理员权限，无法访问此页面。</p>
+            <a href="/" class="btn-primary" style="display:inline-block;margin-top:16px;text-decoration:none;">返回主页</a>
+        </div>
+
+        <!-- Admin content -->
+        <div id="adminContent" hidden>
+            <!-- Section 1: User Management -->
+            <section class="admin-section">
+                <h2 class="admin-section-title">用户管理</h2>
+                <div class="admin-list" id="userList">
+                    <div class="admin-list-empty">加载中...</div>
+                </div>
+                <div class="admin-form">
+                    <input type="text" id="newUsername" placeholder="用户名" class="input-field">
+                    <input type="password" id="newPassword" placeholder="密码" class="input-field">
+                    <select id="newRole" class="input-field admin-select">
+                        <option value="user">普通用户</option>
+                        <option value="admin">管理员</option>
+                    </select>
+                    <button class="btn-primary" id="addUserBtn">添加用户</button>
+                </div>
+            </section>
+
+            <!-- Section 2: Stamp Management -->
+            <section class="admin-section">
+                <h2 class="admin-section-title">印章管理</h2>
+                <div class="admin-list" id="stampList">
+                    <div class="admin-list-empty">加载中...</div>
+                </div>
+                <div class="admin-form">
+                    <input type="text" id="newCompany" placeholder="公司主体名称" class="input-field">
+                    <div class="admin-file-upload">
+                        <input type="file" id="stampFileInput" accept=".png,.jpg,.jpeg" hidden>
+                        <button class="btn-secondary" id="stampFileBtn">选择印章图片</button>
+                        <span class="admin-file-name" id="stampFileName">未选择文件</span>
+                    </div>
+                    <button class="btn-primary" id="addStampBtn">添加印章</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>

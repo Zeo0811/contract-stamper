@@ -147,8 +147,56 @@ body {
 /* ── Header ── */
 .app-header {
     background: linear-gradient(135deg, var(--green), var(--green-dark));
-    color: #fff; padding: 12px 24px; display: flex; align-items: center; gap: 12px;
+    color: #fff; padding: 12px 24px; display: flex; align-items: center;
+    justify-content: space-between;
 }
+
+.header-left {
+    display: flex; align-items: center; gap: 12px;
+}
+
+.header-right {
+    display: flex; align-items: center; gap: 12px;
+}
+
+.header-user {
+    font-size: 14px; opacity: .9;
+}
+
+.admin-badge {
+    font-size: 11px; background: rgba(255,255,255,.2); padding: 2px 8px;
+    border-radius: 10px; font-weight: 600;
+}
+
+.admin-header-badge {
+    font-size: 12px; background: rgba(255,255,255,.2); padding: 3px 10px;
+    border-radius: 10px; font-weight: 600; margin-left: 4px;
+}
+
+.header-admin-link {
+    font-size: 13px; color: rgba(255,255,255,.85); text-decoration: none;
+    border-bottom: 1px solid rgba(255,255,255,.3);
+    transition: color var(--transition);
+}
+
+.header-admin-link:hover { color: #fff; }
+
+.header-back-link {
+    font-size: 13px; color: rgba(255,255,255,.85); text-decoration: none;
+    border-bottom: 1px solid rgba(255,255,255,.3);
+    transition: color var(--transition);
+}
+
+.header-back-link:hover { color: #fff; }
+
+.header-logout {
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+    color: #fff; padding: 4px 12px; border-radius: var(--radius-sm);
+    font-size: 13px; cursor: pointer; font-family: var(--font);
+    transition: background var(--transition);
+}
+
+.header-logout:hover { background: rgba(255,255,255,.25); }
 
 .header-logo {
     width: 32px; height: 32px; border-radius: 6px;
@@ -343,6 +391,88 @@ body {
     pointer-events: none; display: none; letter-spacing: 1px;
 }
 #fireworks.active + .fw-hint { display: block; }
+
+/* ── Admin Page ── */
+.admin-body { background: var(--bg); }
+
+.admin-container {
+    max-width: 800px; margin: 0 auto; padding: 24px 20px;
+}
+
+.admin-denied {
+    text-align: center; padding: 60px 20px;
+}
+
+.admin-denied h2 { color: var(--dark); margin-bottom: 8px; }
+.admin-denied p { color: var(--gray); }
+
+.admin-section {
+    background: var(--card); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card); padding: 24px; margin-bottom: 20px;
+}
+
+.admin-section-title {
+    font-size: 17px; font-weight: 700; color: var(--dark); margin-bottom: 16px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+}
+
+.admin-list { display: flex; flex-direction: column; gap: 0; }
+
+.admin-list-empty {
+    text-align: center; color: var(--gray); font-size: 14px; padding: 20px;
+}
+
+.admin-list-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+
+.admin-list-item:last-child { border-bottom: none; }
+
+.admin-list-info { display: flex; align-items: center; gap: 10px; }
+
+.admin-list-name { font-size: 15px; font-weight: 500; color: var(--dark); }
+
+.admin-list-hint { font-size: 12px; color: var(--gray); }
+
+.admin-role-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600;
+}
+
+.role-admin { background: var(--green-light); color: var(--green); }
+.role-user { background: var(--gray-light); color: var(--gray); }
+
+.admin-stamp-thumb {
+    width: 40px; height: 40px; object-fit: contain; border-radius: 4px;
+    border: 1px solid var(--border);
+}
+
+.admin-form {
+    display: flex; gap: 10px; align-items: center; margin-top: 16px;
+    padding-top: 16px; border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+
+.admin-form .input-field { flex: 1; min-width: 120px; }
+
+.admin-select { flex: 0 0 auto !important; min-width: 100px !important; }
+
+.admin-file-upload {
+    display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px;
+}
+
+.admin-file-name {
+    font-size: 13px; color: var(--gray);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.btn-danger {
+    background: none; border: 1px solid #e74c3c; color: #e74c3c;
+    padding: 4px 12px; border-radius: var(--radius-sm); font-size: 13px;
+    cursor: pointer; font-family: var(--font); transition: all var(--transition);
+}
+
+.btn-danger:hover { background: #e74c3c; color: #fff; }
 
 /* ── Mobile ── */
 @media (max-width: 768px) {

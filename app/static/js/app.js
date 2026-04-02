@@ -170,8 +170,8 @@
         }
         stampGrid.innerHTML = data.stamps.map(s => `
             <div class="stamp-card" data-url="${s.url}" data-name="${s.name}">
-                <img src="${s.url}" alt="${s.name}">
-                <div class="stamp-card-name">${s.name}</div>
+                <img src="${s.url}" alt="${s.company || s.name}">
+                <div class="stamp-card-name">${s.company || s.name}</div>
             </div>
         `).join('');
 

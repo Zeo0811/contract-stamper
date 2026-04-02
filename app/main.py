@@ -1,21 +1,26 @@
+import json
 import os
 import re
 import asyncio
 import time
 import glob
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
-from app.config import UPLOAD_DIR, WEB_PASSWORD, FILE_TTL_SECONDS
-from app.auth import verify_web_password, set_web_session
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
+from app.config import UPLOAD_DIR, FILE_TTL_SECONDS
+from app.auth import (
+    get_current_user, authenticate, init_users, require_auth,
+    verify_auth, active_sessions,
+)
 
 from app.api.upload import router as upload_router
 from app.api.detect import router as detect_router
 from app.api.stamp import router as stamp_router
 from app.api.result import router as result_router
+from app.api.admin import router as admin_router
 
 async def cleanup_old_files():
     while True:
@@ -32,6 +37,7 @@ async def cleanup_old_files():
 
 @asynccontextmanager
 async def lifespan(app_instance):
+    init_users()
     task = asyncio.create_task(cleanup_old_files())
     yield
     task.cancel()
@@ -49,6 +55,7 @@ app.include_router(upload_router)
 app.include_router(detect_router)
 app.include_router(stamp_router)
 app.include_router(result_router)
+app.include_router(admin_router)
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "uploads"), exist_ok=True)
@@ -61,6 +68,9 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
+STAMPS_META_FILE = os.path.join(UPLOAD_DIR, "stamps_meta.json")
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -68,31 +78,98 @@ def health():
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
+    user = get_current_user(request)
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "authenticated": verify_web_password(request),
+        "authenticated": user is not None,
+        "user": user,
     })
 
 
+@app.post("/api/v1/login")
+async def login_api(body: dict):
+    username = body.get("username", "")
+    password = body.get("password", "")
+    token = authenticate(username, password)
+    if not token:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    response = JSONResponse({"token": token, "username": username})
+    response.set_cookie(
+        key="session_token",
+        value=token,
+        max_age=86400,
+        httponly=False,
+        samesite="lax",
+    )
+    return response
+
+
 @app.post("/login")
-async def login(password: str = Form(...)):
-    if password != WEB_PASSWORD:
+async def login_form(username: str = Form(""), password: str = Form("")):
+    token = authenticate(username, password)
+    if not token:
         return RedirectResponse(url="/?error=1", status_code=303)
     response = RedirectResponse(url="/", status_code=303)
-    set_web_session(response)
+    response.set_cookie(
+        key="session_token",
+        value=token,
+        max_age=86400,
+        httponly=False,
+        samesite="lax",
+    )
     return response
+
+
+@app.get("/api/v1/me")
+async def get_me(user=Depends(require_auth)):
+    return {"username": user["username"], "role": user["role"]}
+
+
+@app.post("/api/v1/logout")
+async def logout(request: Request):
+    token = request.cookies.get("session_token")
+    if token and token in active_sessions:
+        del active_sessions[token]
+    response = JSONResponse({"ok": True})
+    response.delete_cookie("session_token")
+    return response
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/")
+    return templates.TemplateResponse("admin.html", {
+        "request": request,
+        "user": user,
+    })
 
 
 @app.get("/api/v1/stamps/list")
 async def list_preset_stamps():
-    """List all preset stamp images from static/stamps directory."""
+    """List all preset stamp images from static/stamps directory, with company metadata."""
     stamps_dir = os.path.join(os.path.dirname(__file__), "static", "stamps")
     os.makedirs(stamps_dir, exist_ok=True)
+
+    # Load metadata
+    meta = []
+    if os.path.exists(STAMPS_META_FILE):
+        with open(STAMPS_META_FILE, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+    meta_map = {m["filename"]: m for m in meta}
+
     stamps = []
     for f in sorted(os.listdir(stamps_dir)):
         if f.lower().endswith(('.png', '.jpg', '.jpeg')):
-            name = os.path.splitext(f)[0]
-            stamps.append({"name": name, "filename": f, "url": f"/static/stamps/{f}"})
+            m = meta_map.get(f, {})
+            name = m.get("company", os.path.splitext(f)[0])
+            stamps.append({
+                "name": name,
+                "company": name,
+                "filename": f,
+                "url": f"/static/stamps/{f}",
+            })
     return {"stamps": stamps}
 
 
