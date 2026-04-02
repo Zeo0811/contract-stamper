@@ -51,11 +51,15 @@
 
     // ── API helper ──
     async function api(method, path, body, isFormData) {
-        const opts = { method };
+        const opts = { method, headers: {} };
+        const token = localStorage.getItem('token');
+        if (token) {
+            opts.headers['Authorization'] = 'Bearer ' + token;
+        }
         if (isFormData) {
             opts.body = body;
         } else if (body) {
-            opts.headers = { 'Content-Type': 'application/json' };
+            opts.headers['Content-Type'] = 'application/json';
             opts.body = JSON.stringify(body);
         }
         return await fetch(path, opts);
