@@ -70,8 +70,14 @@
         });
     }
 
+    let previewUrls = []; // server-side preview URLs (used for Word uploads)
+    let isWordUpload = false;
+
     async function uploadPdf(file) {
-        showStatus('loading', '上传合同中...');
+        const ext = file.name.split('.').pop().toLowerCase();
+        isWordUpload = (ext === 'docx' || ext === 'doc');
+
+        showStatus('loading', isWordUpload ? '上传并转换 Word 中...' : '上传合同中...');
         const fd = new FormData();
         fd.append('file', file);
         const resp = await api('POST', '/api/v1/upload', fd, true);
@@ -79,19 +85,45 @@
         const data = await resp.json();
         fileId = data.file_id;
         totalPages = data.page_count;
+        previewUrls = data.previews || [];
         pdfPlaceholder.hidden = true;
         pdfDone.hidden = false;
         pdfFileName.textContent = file.name;
 
-        const pdfData = await file.arrayBuffer();
-        pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
-        currentPage = 0;
-        renderPage(0);
+        if (isWordUpload) {
+            // Word file: use server-side preview images
+            pdfDoc = null;
+            currentPage = 0;
+            renderPageFromServer(0);
+        } else {
+            // PDF file: use PDF.js for client-side rendering
+            const pdfData = await file.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
+            currentPage = 0;
+            renderPage(0);
+        }
         previewNav.hidden = false;
 
         await detectKeywords();
         checkReady();
         hideStatus();
+    }
+
+    function renderPageFromServer(num) {
+        if (num < 0 || num >= previewUrls.length) return;
+        const img = new window.Image();
+        img.onload = function () {
+            const maxW = canvasWrap.clientWidth - 48;
+            const scale = Math.min(maxW / img.width, 2);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            currentPage = num;
+            pageInfo.textContent = `${num + 1} / ${totalPages}`;
+            previewTitle.textContent = '合同预览';
+        };
+        img.src = previewUrls[num];
     }
 
     async function uploadStamp(file) {
@@ -115,6 +147,7 @@
     pdfClear.addEventListener('click', e => {
         e.stopPropagation();
         fileId = null; pdfDoc = null; detectedPosition = null; manualPosition = null;
+        isWordUpload = false; previewUrls = [];
         pdfPlaceholder.hidden = false; pdfDone.hidden = true;
         previewNav.hidden = true;
         canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
@@ -146,11 +179,19 @@
         updateStampMarker(viewport);
     }
 
+    function goToPage(num) {
+        if (isWordUpload || !pdfDoc) {
+            renderPageFromServer(num);
+        } else {
+            renderPage(num);
+        }
+    }
+
     prevPage.addEventListener('click', () => {
-        if (currentPage > 0) renderPage(currentPage - 1);
+        if (currentPage > 0) goToPage(currentPage - 1);
     });
     nextPage.addEventListener('click', () => {
-        if (currentPage < totalPages - 1) renderPage(currentPage + 1);
+        if (currentPage < totalPages - 1) goToPage(currentPage + 1);
     });
 
     async function detectKeywords() {
@@ -266,11 +307,20 @@
         showStatus('loading', '处理中...');
 
         const pos = detectedPosition || manualPosition;
-        const page = await pdfDoc.getPage(pos.page + 1);
-        const viewport = page.getViewport({ scale: 1 });
-        const displayScale = canvas.width / viewport.width;
-        const pdfX = pos.x / displayScale;
-        const pdfY = pos.y / displayScale;
+        let pdfX, pdfY;
+
+        if (pdfDoc) {
+            // PDF mode: convert canvas coords to PDF coords via PDF.js
+            const page = await pdfDoc.getPage(pos.page + 1);
+            const viewport = page.getViewport({ scale: 1 });
+            const displayScale = canvas.width / viewport.width;
+            pdfX = pos.x / displayScale;
+            pdfY = pos.y / displayScale;
+        } else {
+            // Word mode: detected positions are already in PDF coords from server
+            pdfX = pos.x;
+            pdfY = pos.y;
+        }
 
         const body = {
             file_id: fileId,
