@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html><head><title>Contract Stamper</title></head>
+<body>
+{% if authenticated %}
+<h1>Contract Stamper</h1>
+{% else %}
+<h1>Login Required</h1>
+<form method="POST" action="/login">
+  <input type="password" name="password" placeholder="Password">
+  <button type="submit">Login</button>
+</form>
+{% endif %}
+</body>
+</html>
