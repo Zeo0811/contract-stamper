@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 import time
 import glob
@@ -76,6 +77,8 @@ async def login(password: str = Form(...)):
 
 @app.get("/api/v1/preview/{filename}")
 async def serve_preview(filename: str):
+    if not re.match(r'^[a-zA-Z0-9._-]+$', filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
     path = os.path.join(UPLOAD_DIR, "previews", filename)
     if not os.path.exists(path):
         raise HTTPException(status_code=404)

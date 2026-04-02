@@ -1,7 +1,7 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from app.auth import verify_auth
+from app.auth import verify_auth, validate_id
 from app.api.stamp import tasks
 
 router = APIRouter(prefix="/api/v1")
@@ -12,6 +12,7 @@ async def get_result(
     task_id: str,
     _: str = Depends(verify_auth),
 ):
+    validate_id(task_id)
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
     task = tasks[task_id]
@@ -28,6 +29,7 @@ async def download(
     task_id: str,
     _: str = Depends(verify_auth),
 ):
+    validate_id(task_id)
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
     task = tasks[task_id]
