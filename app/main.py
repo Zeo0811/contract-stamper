@@ -56,3 +56,9 @@ async def serve_preview(filename: str):
     if not os.path.exists(path):
         raise HTTPException(status_code=404)
     return FileResponse(path)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    from app.config import PORT
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
