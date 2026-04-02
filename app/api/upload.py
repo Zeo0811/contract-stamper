@@ -21,55 +21,52 @@ def _find_libreoffice() -> str:
     raise RuntimeError("LibreOffice not found. Install it to convert Word documents.")
 
 
-def _accept_tracked_changes(word_path: str) -> None:
-    """Accept all tracked changes in a Word document before conversion."""
+def _accept_tracked_changes(word_path: str, output_path: str) -> bool:
+    """Accept all tracked changes, save to output_path. Returns True on success."""
     try:
         from docx import Document
-        doc = Document(word_path)
-        # python-docx doesn't have a direct API for accepting changes,
-        # so we manipulate the XML to remove revision marks
-        from lxml import etree
         ns = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+        doc = Document(word_path)
 
-        for body_element in doc.element.body:
-            # Remove all revision-related elements
-            for tag in ['ins', 'del', 'moveTo', 'moveFrom', 'rPrChange', 'pPrChange', 'sectPrChange', 'tblPrChange']:
-                for elem in body_element.iter(f'{ns}{tag}'):
-                    parent = elem.getparent()
-                    if tag == 'ins':
-                        # Accept insertion: keep content, remove wrapper
-                        for child in list(elem):
-                            parent.insert(list(parent).index(elem), child)
-                        parent.remove(elem)
-                    elif tag == 'del':
-                        # Accept deletion: remove entirely
-                        parent.remove(elem)
-                    else:
-                        # Remove change tracking metadata
-                        parent.remove(elem)
+        # Walk entire document XML and handle revision elements
+        for elem in list(doc.element.body.iter()):
+            tag = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
+            parent = elem.getparent()
+            if parent is None:
+                continue
+            if tag == 'ins':
+                # Accept insertion: move children up, remove wrapper
+                idx = list(parent).index(elem)
+                for child in list(elem):
+                    parent.insert(idx, child)
+                    idx += 1
+                parent.remove(elem)
+            elif tag == 'del':
+                # Accept deletion: remove entirely
+                parent.remove(elem)
+            elif tag in ('rPrChange', 'pPrChange', 'sectPrChange', 'tblPrChange', 'tblGridChange'):
+                parent.remove(elem)
 
-        doc.save(word_path)
+        doc.save(output_path)
+        return True
     except Exception:
-        pass  # If python-docx processing fails, fall back to LibreOffice as-is
+        return False
 
 
 def _convert_word_to_pdf(word_path: str, output_dir: str) -> str:
-    """Convert Word document to PDF using LibreOffice headless, with tracked changes accepted."""
-    # First accept all tracked changes
-    _accept_tracked_changes(word_path)
+    """Convert Word document to PDF using LibreOffice headless."""
+    # Try to accept tracked changes (overwrite in-place since it's our copy)
+    _accept_tracked_changes(word_path, word_path)
 
     lo_bin = _find_libreoffice()
-    # Use macro to hide tracked changes during PDF export
     result = subprocess.run(
-        [lo_bin, "--headless",
-         "--env:UserInstallation=file:///tmp/libreoffice_user",
-         "--convert-to", "pdf",
-         "--outdir", output_dir, word_path],
-        capture_output=True, text=True, timeout=60,
-        env={**os.environ, "LC_ALL": "C"},
+        [lo_bin, "--headless", "--convert-to", "pdf", "--outdir", output_dir, word_path],
+        capture_output=True, text=True, timeout=120,
     )
+
     if result.returncode != 0:
         raise RuntimeError(f"LibreOffice conversion failed: {result.stderr}")
+
     # LibreOffice outputs filename with .pdf extension
     base = os.path.splitext(os.path.basename(word_path))[0]
     pdf_path = os.path.join(output_dir, f"{base}.pdf")
