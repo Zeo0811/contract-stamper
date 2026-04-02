@@ -1,12 +1,15 @@
 import os
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from app.config import UPLOAD_DIR, WEB_PASSWORD
 from app.auth import verify_web_password, set_web_session
 
+from app.api.upload import router as upload_router
+
 app = FastAPI(title="Contract Stamper", version="0.1.0")
+app.include_router(upload_router)
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "uploads"), exist_ok=True)
@@ -39,3 +42,11 @@ async def login(password: str = Form(...)):
     response = RedirectResponse(url="/", status_code=303)
     set_web_session(response)
     return response
+
+
+@app.get("/api/v1/preview/{filename}")
+async def serve_preview(filename: str):
+    path = os.path.join(UPLOAD_DIR, "previews", filename)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404)
+    return FileResponse(path)
