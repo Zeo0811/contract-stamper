@@ -15,7 +15,7 @@ def scan_params_from_slider(value: int) -> dict:
         # High quality flatbed scan
         t = (v - 80) / 20  # 0..1
         return {
-            "dpi": 300,
+            "dpi": 200,
             "brightness_shift": 0.02 * (1 - t),
             "noise_amount": 1.5 * (1 - t),
             "tilt_max": 0.8 * (1 - t),
@@ -24,13 +24,13 @@ def scan_params_from_slider(value: int) -> dict:
             "corner_shadow": 0.15 * (1 - t),
             "brightness_nonuniform": 0.01 * (1 - t),
             "text_soften": 0.2 * (1 - t),
-            "jpeg_quality": 95,
+            "jpeg_quality": 82,
         }
     elif v >= 40:
         # Medium quality scan / decent phone scan
         t = (v - 40) / 40  # 0..1
         return {
-            "dpi": int(200 + 100 * t),
+            "dpi": int(150 + 50 * t),
             "brightness_shift": 0.05 - 0.03 * t,
             "noise_amount": 4 - 2.5 * t,
             "tilt_max": 1.5 - 0.7 * t,
@@ -39,13 +39,13 @@ def scan_params_from_slider(value: int) -> dict:
             "corner_shadow": 0.35 - 0.2 * t,
             "brightness_nonuniform": 0.03 - 0.02 * t,
             "text_soften": 0.5 - 0.3 * t,
-            "jpeg_quality": int(85 + 10 * t),
+            "jpeg_quality": int(72 + 10 * t),
         }
     else:
         # Low quality / old scanner / bad phone scan
         t = v / 40  # 0..1
         return {
-            "dpi": int(150 + 50 * t),
+            "dpi": int(120 + 30 * t),
             "brightness_shift": 0.08 - 0.03 * t,
             "noise_amount": 7 - 3 * t,
             "tilt_max": 2.5 - 1.0 * t,
@@ -54,7 +54,7 @@ def scan_params_from_slider(value: int) -> dict:
             "corner_shadow": 0.5 - 0.15 * t,
             "brightness_nonuniform": 0.05 - 0.02 * t,
             "text_soften": 0.8 - 0.3 * t,
-            "jpeg_quality": int(75 + 10 * t),
+            "jpeg_quality": int(65 + 7 * t),
         }
 
 

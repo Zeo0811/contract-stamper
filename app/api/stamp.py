@@ -72,9 +72,10 @@ def _process_stamp(task_id: str, req: StampRequest):
             doc.close()
 
             result_doc = fitz.open()
+            jpeg_quality = params.get("jpeg_quality", 80)
             for img in processed_images:
                 with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
-                    img.save(tmp.name, "JPEG", quality=95)
+                    img.save(tmp.name, "JPEG", quality=jpeg_quality)
                     img_doc = fitz.open(tmp.name)
                     pdf_bytes = img_doc.convert_to_pdf()
                     img_doc.close()
@@ -84,7 +85,7 @@ def _process_stamp(task_id: str, req: StampRequest):
 
             result_path = os.path.join(UPLOAD_DIR, "results", f"{task_id}.pdf")
             os.makedirs(os.path.dirname(result_path), exist_ok=True)
-            result_doc.save(result_path)
+            result_doc.save(result_path, deflate=True, garbage=4)
             result_doc.close()
             current_pdf = result_path
         else:
