@@ -8,10 +8,14 @@ from app.auth import verify_web_password, set_web_session
 
 from app.api.upload import router as upload_router
 from app.api.detect import router as detect_router
+from app.api.stamp import router as stamp_router
+from app.api.result import router as result_router
 
 app = FastAPI(title="Contract Stamper", version="0.1.0")
 app.include_router(upload_router)
 app.include_router(detect_router)
+app.include_router(stamp_router)
+app.include_router(result_router)
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "uploads"), exist_ok=True)
