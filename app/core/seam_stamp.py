@@ -1,3 +1,4 @@
+import io
 import os
 import random
 import shutil
@@ -35,15 +36,16 @@ def place_seam_stamps(pdf_path: str, stamp_path: str) -> str:
     doc = fitz.open(pdf_path)
     num_pages = len(doc)
     strips = slice_stamp(stamp_path, num_pages)
-    stamp_img_original = Image.open(stamp_path)
-    stamp_height = stamp_img_original.height
+    # Get the actual downscaled stamp height from the first strip (before rotation padding)
+    # Target: stamp displays at 120pt (≈42mm) high in PDF
+    target_h = 120.0
     for i in range(num_pages):
         page = doc[i]
         strip_img = Image.open(strips[i])
         s_width, s_height = strip_img.size
-        scale = 120.0 / stamp_height
+        scale = target_h / s_height
         display_w = s_width * scale
-        display_h = s_height * scale
+        display_h = target_h
         page_w = page.rect.width
         page_h = page.rect.height
         v_offset = random.uniform(-8, 8)
@@ -53,7 +55,10 @@ def place_seam_stamps(pdf_path: str, stamp_path: str) -> str:
         x1 = page_w + h_offset
         y1 = y0 + display_h
         stamp_rect = fitz.Rect(x0, y0, x1, y1)
-        page.insert_image(stamp_rect, filename=strips[i], overlay=True)
+        # Read strip bytes to insert as stream (avoids embedding full-size file)
+        with open(strips[i], "rb") as sf:
+            strip_bytes = sf.read()
+        page.insert_image(stamp_rect, stream=strip_bytes, overlay=True)
     fd, output_path = tempfile.mkstemp(suffix=".pdf")
     os.close(fd)
     doc.save(output_path, deflate=True, garbage=4)
