@@ -492,10 +492,15 @@
     scanSlider.addEventListener('input', () => {
         const v = parseInt(scanSlider.value);
         if (v === 0) scanVal.textContent = '关闭';
-        else if (v >= 80) scanVal.textContent = '轻度';
-        else if (v >= 40) scanVal.textContent = '中度';
+        else if (v <= 30) scanVal.textContent = '轻度';
+        else if (v <= 70) scanVal.textContent = '中度';
         else scanVal.textContent = '重度';
     });
+
+    // Convert slider value (0=off, higher=stronger) to API value (higher=lighter)
+    function scanSliderToApi(v) {
+        return v > 0 ? (101 - v) : 0;
+    }
 
     // ── Process / Download ──
     function checkReady() {
@@ -535,7 +540,7 @@
             stamp_id: stampId,
             party_b_position: { page: pos.page, x: pdfX, y: pdfY },
             riding_seam: seamToggle.checked,
-            scan_effect: parseInt(scanSlider.value),
+            scan_effect: scanSliderToApi(parseInt(scanSlider.value)),
             original_filename: lastFileName,
         };
 

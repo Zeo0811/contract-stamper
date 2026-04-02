@@ -131,7 +131,7 @@
             </section>
 
             <section class="panel-section">
-                <label class="section-label">盖章设置</label>
+                <label class="section-label">处理设置</label>
                 <div class="setting-row">
                     <span>盖章方</span>
                     <div class="party-toggle" id="partyToggle">
@@ -140,25 +140,21 @@
                     </div>
                 </div>
                 <div class="setting-row">
-                    <span>印章大小</span>
-                    <input type="range" id="stampSize" min="20" max="60" value="42" class="slider">
-                    <span id="stampSizeVal">42mm</span>
-                </div>
-                <div class="setting-row">
                     <span>骑缝章</span>
                     <label class="toggle">
                         <input type="checkbox" id="seamToggle" checked>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-            </section>
-
-            <section class="panel-section">
-                <label class="section-label">扫描效果</label>
                 <div class="setting-row">
-                    <span>处理质量</span>
+                    <span>印章大小</span>
+                    <input type="range" id="stampSize" min="20" max="60" value="42" class="slider">
+                    <span class="setting-val" id="stampSizeVal">42mm</span>
+                </div>
+                <div class="setting-row">
+                    <span>扫描强度</span>
                     <input type="range" id="scanSlider" min="0" max="100" value="50" class="slider">
-                    <span id="scanVal">中度</span>
+                    <span class="setting-val" id="scanVal">中度</span>
                 </div>
             </section>
 
