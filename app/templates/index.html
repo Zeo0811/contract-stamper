@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+    <meta name="theme-color" content="#407600">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>十字路口 · 法务助手</title>
     <link rel="icon" href="/static/logo.png">
     <link rel="stylesheet" href="/static/css/style.css">
@@ -10,9 +13,8 @@
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
 <body>
-    <!-- Login overlay -->
     {% if not authenticated %}
-    <div class="login-overlay" id="loginOverlay">
+    <div class="login-screen">
         <div class="login-card">
             <img src="/static/logo.png" alt="Logo" class="login-logo">
             <h2>十字路口 · 法务助手</h2>
@@ -20,7 +22,7 @@
             <form id="loginForm" class="login-form">
                 <input type="text" name="username" placeholder="用户名" class="input-field" autofocus>
                 <input type="password" name="password" placeholder="密码" class="input-field">
-                <button type="submit" class="btn-primary">登录</button>
+                <button type="submit" class="btn-primary" style="width:100%;padding:13px;">登录</button>
             </form>
             <p class="error-text" id="loginError" hidden>用户名或密码错误</p>
         </div>
@@ -64,32 +66,61 @@
         </div>
         <div class="header-right">
             <span class="header-user" id="headerUser"></span>
-            <span class="admin-badge" id="adminBadge" hidden>管理员</span>
+            <span class="admin-badge" id="adminBadge" hidden>ADMIN</span>
             <a href="/admin" class="header-admin-link" id="adminLink" hidden>管理后台</a>
             <button class="header-logout" id="logoutBtn">退出</button>
         </div>
     </header>
 
-    <main class="app-main">
-        <!-- Left panel: Controls -->
+    <!-- ══ Welcome Screen ══ -->
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-inner">
+            <img src="/static/logo.png" alt="Logo" class="welcome-logo">
+            <h2 class="welcome-title">法务助手</h2>
+            <p class="welcome-desc">上传合同文件，自动识别盖章位置<br>生成骑缝章与模拟扫描效果</p>
+
+            <div class="welcome-upload" id="welcomeUploadZone">
+                <input type="file" id="pdfInput" accept=".pdf,.docx,.doc" hidden>
+                <div class="welcome-upload-content">
+                    <div class="welcome-upload-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="12" y1="18" x2="12" y2="12"/>
+                            <polyline points="9 15 12 12 15 15"/>
+                        </svg>
+                    </div>
+                    <span class="welcome-upload-main">拖拽文件到此处，或点击选择</span>
+                    <span class="welcome-upload-hint">支持 PDF、Word (.docx / .doc)</span>
+                </div>
+                <div class="welcome-upload-status">
+                    <div class="spinner"></div>
+                    <span id="welcomeStatusText">上传中...</span>
+                </div>
+            </div>
+
+            <div class="welcome-history" id="welcomeHistorySection">
+                <label class="section-label">最近处理</label>
+                <div class="history-list" id="historyList">
+                    <div class="history-empty">暂无记录</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ Workspace ══ -->
+    <main class="workspace" id="workspace">
         <aside class="control-panel">
-            <!-- Upload PDF/Word -->
+            <!-- File info -->
             <section class="panel-section">
                 <label class="section-label">合同文件</label>
-                <div class="upload-zone" id="pdfUploadZone">
-                    <input type="file" id="pdfInput" accept=".pdf,.docx,.doc" hidden>
-                    <div class="upload-placeholder" id="pdfPlaceholder">
-                        <span class="upload-icon">&#128196;</span>
-                        <span>拖拽或点击上传 PDF / Word</span>
-                    </div>
-                    <div class="upload-done" id="pdfDone" hidden>
-                        <span class="file-name" id="pdfFileName"></span>
-                        <button class="btn-text" id="pdfClear">更换</button>
-                    </div>
+                <div class="file-info">
+                    <span class="file-name" id="pdfFileName"></span>
+                    <button class="btn-text" id="pdfClear">更换</button>
                 </div>
             </section>
 
-            <!-- Stamp Selection -->
+            <!-- Stamp selection -->
             <section class="panel-section">
                 <label class="section-label">选择印章</label>
                 <div class="stamp-grid" id="stampGrid">
@@ -97,7 +128,7 @@
                 </div>
             </section>
 
-            <!-- Stamp Settings -->
+            <!-- Settings -->
             <section class="panel-section">
                 <label class="section-label">盖章设置</label>
                 <div class="setting-row">
@@ -121,11 +152,11 @@
                 </div>
             </section>
 
-            <!-- Scan Effect -->
+            <!-- Scan effect -->
             <section class="panel-section">
                 <label class="section-label">扫描效果</label>
                 <div class="setting-row">
-                    <span>效果强度</span>
+                    <span>处理质量</span>
                     <input type="range" id="scanSlider" min="0" max="100" value="50" class="slider">
                     <span id="scanVal">中度</span>
                 </div>
@@ -133,9 +164,9 @@
 
             <!-- Actions -->
             <section class="panel-section">
-                <div class="action-main">
+                <div class="action-row">
                     <button class="btn-primary btn-process" id="processBtn" disabled>
-                        <span class="btn-text-inner" id="processBtnText">开始处理</span>
+                        <span id="processBtnText">开始处理</span>
                         <div class="btn-progress" id="btnProgress"></div>
                     </button>
                     <button class="btn-reset" id="newTaskBtn" hidden title="重新开始">
@@ -149,25 +180,23 @@
                 <span id="statusText"></span>
             </div>
 
-            <!-- History -->
+            <!-- History in sidebar -->
             <section class="panel-section">
                 <label class="section-label">处理记录</label>
-                <div class="history-list" id="historyList">
+                <div class="history-list" id="sidebarHistoryList">
                     <div class="history-empty">暂无记录</div>
                 </div>
             </section>
         </aside>
 
-        <!-- Right panel: PDF Preview -->
+        <!-- Preview -->
         <section class="preview-panel">
             <div class="preview-header">
-                <span id="previewTitle">上传合同以预览</span>
+                <span id="previewTitle">合同预览</span>
                 <span class="page-count" id="pageCount"></span>
             </div>
             <div class="preview-scroll" id="previewScroll">
-                <div class="pages-container" id="pagesContainer">
-                    <!-- Canvases will be dynamically added here -->
-                </div>
+                <div class="pages-container" id="pagesContainer"></div>
                 <div class="stamp-marker" id="stampMarker" hidden>
                     <div class="stamp-marker-ring"></div>
                 </div>
@@ -175,20 +204,17 @@
         </section>
     </main>
 
-    <!-- Fireworks canvas -->
+    <!-- Fireworks -->
     <canvas id="fireworks" onclick="stopFireworks()"></canvas>
     <div class="fw-hint">点击任意位置关闭</div>
 
     <script src="/static/js/app.js"></script>
     <script>
-    // Header user info
     (function() {
         async function loadUserInfo() {
             const token = localStorage.getItem('token');
             const opts = {};
-            if (token) {
-                opts.headers = { 'Authorization': 'Bearer ' + token };
-            }
+            if (token) opts.headers = { 'Authorization': 'Bearer ' + token };
             try {
                 const resp = await fetch('/api/v1/me', opts);
                 if (resp.ok) {

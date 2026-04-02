@@ -14,11 +14,14 @@
     let isCompleted = false;
     let history = JSON.parse(localStorage.getItem('stampHistory') || '[]');
 
-    // ── Elements ──
+    // ── Elements: Welcome ──
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const welcomeUploadZone = document.getElementById('welcomeUploadZone');
+    const welcomeStatusText = document.getElementById('welcomeStatusText');
+
+    // ── Elements: Workspace ──
+    const workspace = document.getElementById('workspace');
     const pdfInput = document.getElementById('pdfInput');
-    const pdfUploadZone = document.getElementById('pdfUploadZone');
-    const pdfPlaceholder = document.getElementById('pdfPlaceholder');
-    const pdfDone = document.getElementById('pdfDone');
     const pdfFileName = document.getElementById('pdfFileName');
     const pdfClear = document.getElementById('pdfClear');
 
@@ -43,8 +46,6 @@
     const pageCount = document.getElementById('pageCount');
     const stampMarker = document.getElementById('stampMarker');
 
-    const historyList = document.getElementById('historyList');
-
     // ── API helper ──
     async function api(method, path, body, isFormData) {
         const opts = { method, headers: {} };
@@ -61,9 +62,29 @@
         return await fetch(path, opts);
     }
 
-    // ── Upload handlers ──
+    // ══════════════════════════════════════
+    // WELCOME / WORKSPACE TRANSITIONS
+    // ══════════════════════════════════════
+    function showWorkspace() {
+        welcomeScreen.classList.add('leaving');
+        setTimeout(() => {
+            welcomeScreen.style.display = 'none';
+            workspace.classList.add('visible');
+        }, 400);
+    }
+
+    function showWelcome() {
+        workspace.classList.remove('visible');
+        welcomeScreen.style.display = '';
+        welcomeScreen.classList.remove('leaving');
+    }
+
+    // ── Upload zone setup ──
     function setupUploadZone(zone, input, onFile) {
-        zone.addEventListener('click', () => input.click());
+        zone.addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('a')) return;
+            input.click();
+        });
         zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
         zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
         zone.addEventListener('drop', e => {
@@ -83,33 +104,46 @@
         isWordUpload = (ext === 'docx' || ext === 'doc');
         lastFileName = file.name;
 
-        showStatus('loading', isWordUpload ? '上传并转换 Word 中...' : '上传合同中...');
+        // Show uploading state on welcome screen
+        welcomeUploadZone.classList.add('uploading');
+        welcomeStatusText.textContent = isWordUpload ? '上传并转换 Word 中...' : '上传合同中...';
+
         const fd = new FormData();
         fd.append('file', file);
         const resp = await api('POST', '/api/v1/upload', fd, true);
-        if (!resp.ok) { showStatus('error', '上传失败'); return; }
+        if (!resp.ok) {
+            welcomeUploadZone.classList.remove('uploading');
+            showStatus('error', '上传失败');
+            return;
+        }
         const data = await resp.json();
         fileId = data.file_id;
         totalPages = data.page_count;
         previewUrls = data.previews || [];
-        pdfPlaceholder.hidden = true;
-        pdfDone.hidden = false;
         pdfFileName.textContent = file.name;
 
-        if (isWordUpload) {
-            pdfDoc = null;
-            renderAllPagesFromServer();
-        } else {
-            const pdfData = await file.arrayBuffer();
-            pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
-            totalPages = pdfDoc.numPages;
-            await renderAllPages();
-        }
+        // Transition to workspace
+        showWorkspace();
 
-        await detectKeywords();
-        checkReady();
-        hideStatus();
+        // Render preview after a small delay to let workspace appear
+        setTimeout(async () => {
+            if (isWordUpload) {
+                pdfDoc = null;
+                renderAllPagesFromServer();
+            } else {
+                const pdfData = await file.arrayBuffer();
+                pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
+                totalPages = pdfDoc.numPages;
+                await renderAllPages();
+            }
+
+            await detectKeywords();
+            checkReady();
+        }, 500);
     }
+
+    // Set up the welcome upload zone
+    setupUploadZone(welcomeUploadZone, pdfInput, uploadPdf);
 
     // ── Multi-page rendering ──
     async function renderAllPages() {
@@ -119,7 +153,7 @@
 
         for (let i = 0; i < totalPages; i++) {
             const page = await pdfDoc.getPage(i + 1);
-            const maxW = previewScroll.clientWidth - 40;
+            const maxW = previewScroll.clientWidth - 48;
             const scale = Math.min(maxW / page.getViewport({ scale: 1 }).width, 2);
             const viewport = page.getViewport({ scale });
 
@@ -144,7 +178,6 @@
             pagesContainer.appendChild(wrapper);
         }
 
-        // Enable click-to-place on all canvases
         enableCanvasClicks();
     }
 
@@ -167,7 +200,7 @@
 
             const img = new window.Image();
             img.onload = function () {
-                const maxW = previewScroll.clientWidth - 40;
+                const maxW = previewScroll.clientWidth - 48;
                 const scale = Math.min(maxW / img.width, 2);
                 canvas.width = img.width * scale;
                 canvas.height = img.height * scale;
@@ -201,7 +234,7 @@
 
             for (let i = 0; i < totalPages; i++) {
                 const page = await pdfDoc.getPage(i + 1);
-                const maxW = previewScroll.clientWidth - 40;
+                const maxW = previewScroll.clientWidth - 48;
                 const scale = Math.min(maxW / page.getViewport({ scale: 1 }).width, 2);
                 const viewport = page.getViewport({ scale });
 
@@ -230,8 +263,7 @@
         }
     }
 
-    setupUploadZone(pdfUploadZone, pdfInput, uploadPdf);
-
+    // ── Clear / Reset ──
     pdfClear.addEventListener('click', e => {
         e.stopPropagation();
         resetContractState();
@@ -240,23 +272,24 @@
     function resetContractState() {
         fileId = null; pdfDoc = null; detectedPosition = null; manualPosition = null;
         isWordUpload = false; previewUrls = []; resultTaskId = null; isCompleted = false;
-        pdfPlaceholder.hidden = false; pdfDone.hidden = true;
         pagesContainer.innerHTML = '';
         pageCount.textContent = '';
-        previewTitle.textContent = '上传合同以预览';
+        previewTitle.textContent = '合同预览';
         stampMarker.hidden = true;
         newTaskBtn.hidden = true;
         btnProgress.style.width = '0';
         processBtn.classList.remove('download');
         processBtnText.textContent = '开始处理';
         pdfInput.value = '';
+        welcomeUploadZone.classList.remove('uploading');
         checkReady();
+
+        // Go back to welcome screen
+        showWelcome();
     }
 
     newTaskBtn.addEventListener('click', () => {
         resetContractState();
-        showStatus('success', '已重置，请上传新合同');
-        hideStatus();
     });
 
     // ── Preset Stamps ──
@@ -290,7 +323,7 @@
             if (!uploadResp.ok) { showStatus('error', '印章加载失败'); return; }
             const uploadData = await uploadResp.json();
             stampId = uploadData.stamp_id;
-            showStatus('success', `已选择印章: ${card.dataset.name}`);
+            showStatus('success', `已选择: ${card.dataset.name}`);
             hideStatus();
             checkReady();
         });
@@ -324,7 +357,6 @@
             detectedPosition = data.positions[0];
             showStatus('success', `已识别: "${detectedPosition.keyword}" 在第 ${detectedPosition.page + 1} 页`);
             showStampMarkerOnPage(detectedPosition.page, detectedPosition.x, detectedPosition.y);
-            // Scroll to the detected page
             const wrapper = pagesContainer.querySelector(`[data-page-num="${detectedPosition.page}"]`);
             if (wrapper) wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
@@ -332,7 +364,7 @@
         }
     }
 
-    // ── Click-to-place on canvases ──
+    // ── Click-to-place ──
     function enableCanvasClicks() {
         pagesContainer.querySelectorAll('canvas').forEach(canvas => {
             canvas.style.cursor = 'crosshair';
@@ -394,10 +426,32 @@
         stampMarker.style.left = (markerStartX + e.clientX - dragStartX) + 'px';
         stampMarker.style.top = (markerStartY + e.clientY - dragStartY) + 'px';
     });
-    document.addEventListener('mouseup', () => {
+    document.addEventListener('mouseup', () => { finishDrag(); });
+
+    // ── Touch events for mobile ──
+    stampMarker.addEventListener('touchstart', e => {
+        dragging = true;
+        const touch = e.touches[0];
+        dragStartX = touch.clientX;
+        dragStartY = touch.clientY;
+        markerStartX = stampMarker.offsetLeft;
+        markerStartY = stampMarker.offsetTop;
+        e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchmove', e => {
+        if (!dragging) return;
+        const touch = e.touches[0];
+        stampMarker.style.left = (markerStartX + touch.clientX - dragStartX) + 'px';
+        stampMarker.style.top = (markerStartY + touch.clientY - dragStartY) + 'px';
+        e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => { finishDrag(); });
+
+    function finishDrag() {
         if (!dragging) return;
         dragging = false;
-        // Find which canvas the marker is over
         const markerCx = stampMarker.offsetLeft + 40;
         const markerCy = stampMarker.offsetTop + 40;
         const canvases = pagesContainer.querySelectorAll('canvas');
@@ -422,7 +476,7 @@
                 break;
             }
         }
-    });
+    }
 
     // ── Settings ──
     stampSize.addEventListener('input', () => {
@@ -437,7 +491,7 @@
         else scanVal.textContent = '重度';
     });
 
-    // ── Process / Download (merged button) ──
+    // ── Process / Download ──
     function checkReady() {
         if (!isCompleted) {
             processBtn.disabled = !(fileId && stampId && (detectedPosition || manualPosition));
@@ -534,17 +588,27 @@
     }
 
     function renderHistory() {
-        if (history.length === 0) {
-            historyList.innerHTML = '<div class="history-empty">暂无记录</div>';
-            return;
+        const html = history.length === 0
+            ? '<div class="history-empty">暂无记录</div>'
+            : history.map(h => `
+                <div class="history-item">
+                    <span class="history-name" title="${h.name}">${h.name}</span>
+                    <span class="history-time">${h.time}</span>
+                    <button class="history-dl" onclick="window.location.href='/api/v1/download/${h.taskId}'">下载</button>
+                </div>
+            `).join('');
+
+        // Render to both welcome and sidebar history lists
+        const welcomeList = document.getElementById('historyList');
+        const sidebarList = document.getElementById('sidebarHistoryList');
+        if (welcomeList) welcomeList.innerHTML = html;
+        if (sidebarList) sidebarList.innerHTML = html;
+
+        // Hide welcome history section if no history
+        const welcomeHistorySection = document.getElementById('welcomeHistorySection');
+        if (welcomeHistorySection) {
+            welcomeHistorySection.style.display = history.length === 0 ? 'none' : '';
         }
-        historyList.innerHTML = history.map(h => `
-            <div class="history-item">
-                <span class="history-name" title="${h.name}">${h.name}</span>
-                <span class="history-time">${h.time}</span>
-                <button class="history-dl" onclick="window.location.href='/api/v1/download/${h.taskId}'">下载</button>
-            </div>
-        `).join('');
     }
 
     renderHistory();

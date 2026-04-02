@@ -2,7 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+    <meta name="theme-color" content="#407600">
     <title>管理后台 · 十字路口</title>
     <link rel="icon" href="/static/logo.png">
     <link rel="stylesheet" href="/static/css/style.css">
@@ -21,16 +22,13 @@
     </header>
 
     <div class="admin-container" id="adminContainer">
-        <!-- Access denied screen (hidden by default) -->
         <div class="admin-denied" id="adminDenied" hidden>
             <h2>需要管理员权限</h2>
             <p>您的账号没有管理员权限，无法访问此页面。</p>
-            <a href="/" class="btn-primary" style="display:inline-block;margin-top:16px;text-decoration:none;">返回主页</a>
+            <a href="/" class="btn-primary" style="display:inline-block;margin-top:20px;text-decoration:none;">返回主页</a>
         </div>
 
-        <!-- Admin content -->
         <div id="adminContent" hidden>
-            <!-- Section 1: User Management -->
             <section class="admin-section">
                 <h2 class="admin-section-title">用户管理</h2>
                 <div class="admin-list" id="userList">
@@ -47,7 +45,6 @@
                 </div>
             </section>
 
-            <!-- Section 2: Stamp Management -->
             <section class="admin-section">
                 <h2 class="admin-section-title">印章管理</h2>
                 <div class="admin-list" id="stampList">
