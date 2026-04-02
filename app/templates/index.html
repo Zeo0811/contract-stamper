@@ -1,14 +1,127 @@
 <!DOCTYPE html>
-<html><head><title>Contract Stamper</title></head>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contract Stamper</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+</head>
 <body>
-{% if authenticated %}
-<h1>Contract Stamper</h1>
-{% else %}
-<h1>Login Required</h1>
-<form method="POST" action="/login">
-  <input type="password" name="password" placeholder="Password">
-  <button type="submit">Login</button>
-</form>
-{% endif %}
+    {% if not authenticated %}
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <h2>Contract Stamper</h2>
+            <p class="login-subtitle">请输入访问密码</p>
+            <form method="POST" action="/login" class="login-form">
+                <input type="password" name="password" placeholder="密码" class="input-field" autofocus>
+                <button type="submit" class="btn-primary">进入</button>
+            </form>
+            {% if request.query_params.get('error') %}
+            <p class="error-text">密码错误</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if authenticated %}
+    <header class="app-header">
+        <h1>Contract Stamper</h1>
+        <span class="header-subtitle">合同自动盖章工具</span>
+    </header>
+
+    <main class="app-main">
+        <aside class="control-panel">
+            <section class="panel-section">
+                <label class="section-label">合同文件</label>
+                <div class="upload-zone" id="pdfUploadZone">
+                    <input type="file" id="pdfInput" accept=".pdf" hidden>
+                    <div class="upload-placeholder" id="pdfPlaceholder">
+                        <span class="upload-icon">&#128196;</span>
+                        <span>拖拽或点击上传 PDF</span>
+                    </div>
+                    <div class="upload-done" id="pdfDone" hidden>
+                        <span class="file-name" id="pdfFileName"></span>
+                        <button class="btn-text" id="pdfClear">更换</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel-section">
+                <label class="section-label">印章图片</label>
+                <div class="upload-zone" id="stampUploadZone">
+                    <input type="file" id="stampInput" accept=".png" hidden>
+                    <div class="upload-placeholder" id="stampPlaceholder">
+                        <span class="upload-icon">&#128308;</span>
+                        <span>拖拽或点击上传印章 PNG</span>
+                    </div>
+                    <div class="upload-done" id="stampDone" hidden>
+                        <img id="stampPreview" class="stamp-preview" alt="stamp">
+                        <button class="btn-text" id="stampClear">更换</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel-section">
+                <label class="section-label">盖章设置</label>
+                <div class="setting-row">
+                    <span>印章大小</span>
+                    <input type="range" id="stampSize" min="20" max="60" value="42" class="slider">
+                    <span id="stampSizeVal">42mm</span>
+                </div>
+                <div class="setting-row">
+                    <span>骑缝章</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="seamToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </section>
+
+            <section class="panel-section">
+                <label class="section-label">扫描效果</label>
+                <div class="setting-row">
+                    <span>效果强度</span>
+                    <input type="range" id="scanSlider" min="0" max="100" value="0" class="slider">
+                    <span id="scanVal">关闭</span>
+                </div>
+            </section>
+
+            <section class="panel-section">
+                <button class="btn-primary btn-process" id="processBtn" disabled>
+                    <span class="btn-text-inner">开始处理</span>
+                    <div class="btn-progress" id="btnProgress"></div>
+                </button>
+                <button class="btn-secondary" id="downloadBtn" hidden>下载结果 PDF</button>
+            </section>
+
+            <div class="status-bar" id="statusBar" hidden>
+                <span id="statusText"></span>
+            </div>
+        </aside>
+
+        <section class="preview-panel">
+            <div class="preview-header">
+                <span id="previewTitle">上传合同以预览</span>
+                <div class="preview-nav" id="previewNav" hidden>
+                    <button class="btn-icon" id="prevPage">&lt;</button>
+                    <span id="pageInfo">1 / 1</span>
+                    <button class="btn-icon" id="nextPage">&gt;</button>
+                </div>
+            </div>
+            <div class="preview-canvas-wrap" id="canvasWrap">
+                <canvas id="pdfCanvas"></canvas>
+                <div class="stamp-marker" id="stampMarker" hidden>
+                    <div class="stamp-marker-ring"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+    {% endif %}
+
+    {% if authenticated %}
+    <script src="/static/js/app.js"></script>
+    {% endif %}
 </body>
 </html>
