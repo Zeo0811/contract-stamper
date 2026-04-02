@@ -605,17 +605,8 @@
                 </div>
             `).join('');
 
-        // Render to both welcome and sidebar history lists
-        const welcomeList = document.getElementById('historyList');
         const sidebarList = document.getElementById('sidebarHistoryList');
-        if (welcomeList) welcomeList.innerHTML = html;
         if (sidebarList) sidebarList.innerHTML = html;
-
-        // Hide welcome history section if no history
-        const welcomeHistorySection = document.getElementById('welcomeHistorySection');
-        if (welcomeHistorySection) {
-            welcomeHistorySection.style.display = history.length === 0 ? 'none' : '';
-        }
     }
 
     renderHistory();

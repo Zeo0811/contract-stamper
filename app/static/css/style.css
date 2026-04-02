@@ -213,15 +213,13 @@ body {
    WELCOME SCREEN (Full-page upload entry)
    ══════════════════════════════════════════ */
 .welcome-screen {
-    min-height: calc(100vh - 56px);
+    height: calc(100vh - 56px);
     display: flex;
     align-items: center;
     justify-content: center;
     background: radial-gradient(ellipse at 50% 38%, var(--g50) 0%, var(--bg) 65%);
     transition: opacity var(--dur-slow) var(--ease), transform var(--dur-slow) var(--ease);
     position: relative;
-    overflow-y: auto;
-    padding: 40px 0;
 }
 
 .welcome-screen.leaving {
@@ -316,12 +314,6 @@ body {
 .welcome-upload.uploading .welcome-upload-content { display: none; }
 .welcome-upload.uploading .welcome-upload-status { display: flex; }
 
-/* Welcome history */
-.welcome-history {
-    margin-top: 48px;
-    text-align: left;
-    animation: fadeUp .6s var(--ease-out) .15s both;
-}
 
 /* ══════════════════════════════════════════
    WORKSPACE (sidebar + preview)
@@ -1031,7 +1023,7 @@ body {
     .login-card h2 { font-size: 20px; }
 
     /* Welcome */
-    .welcome-screen { min-height: calc(100vh - 50px); min-height: calc(100dvh - 50px); }
+    .welcome-screen { height: calc(100vh - 50px); height: calc(100dvh - 50px); }
     .welcome-inner { padding: 0 20px; }
     .welcome-logo { width: 64px; height: 64px; }
     .welcome-title { font-size: 24px; }
