@@ -7,9 +7,11 @@ from app.config import UPLOAD_DIR, WEB_PASSWORD
 from app.auth import verify_web_password, set_web_session
 
 from app.api.upload import router as upload_router
+from app.api.detect import router as detect_router
 
 app = FastAPI(title="Contract Stamper", version="0.1.0")
 app.include_router(upload_router)
+app.include_router(detect_router)
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "uploads"), exist_ok=True)
