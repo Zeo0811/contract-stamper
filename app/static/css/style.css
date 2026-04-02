@@ -704,6 +704,22 @@ body {
 .status-bar.success { background: var(--primary-lt); color: var(--primary); }
 .status-bar.error   { background: var(--danger-lt); color: var(--danger); }
 
+/* Manual position warning banner in preview panel */
+.preview-warning {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #fef2f2;
+    border-bottom: 2px solid #ef4444;
+    color: #b91c1c;
+    font-size: 13px;
+    font-weight: 600;
+    animation: fadeIn .3s var(--ease-out);
+}
+.preview-warning.visible { display: flex; }
+.preview-warning svg { width: 18px; height: 18px; flex-shrink: 0; }
+
 /* ══════════════════════════════════════════
    HISTORY LIST
    ══════════════════════════════════════════ */

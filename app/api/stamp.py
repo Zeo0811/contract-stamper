@@ -1,3 +1,4 @@
+import io
 import os
 import uuid
 import shutil
@@ -74,14 +75,19 @@ def _process_stamp(task_id: str, req: StampRequest):
             result_doc = fitz.open()
             jpeg_quality = params.get("jpeg_quality", 80)
             for img in processed_images:
-                with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
-                    img.save(tmp.name, "JPEG", quality=jpeg_quality)
-                    img_doc = fitz.open(tmp.name)
-                    pdf_bytes = img_doc.convert_to_pdf()
-                    img_doc.close()
-                    img_pdf = fitz.open("pdf", pdf_bytes)
-                    result_doc.insert_pdf(img_pdf)
-                    os.unlink(tmp.name)
+                w, h = img.size
+                # A4 width in points, scale height proportionally
+                page_w = 595.276
+                page_h = page_w * h / w
+                page = result_doc.new_page(width=page_w, height=page_h)
+                # Encode as JPEG bytes and insert directly (keeps compression)
+                buf = io.BytesIO()
+                img.save(buf, "JPEG", quality=jpeg_quality)
+                jpeg_bytes = buf.getvalue()
+                page.insert_image(
+                    fitz.Rect(0, 0, page_w, page_h),
+                    stream=jpeg_bytes,
+                )
 
             result_path = os.path.join(UPLOAD_DIR, "results", f"{task_id}.pdf")
             os.makedirs(os.path.dirname(result_path), exist_ok=True)

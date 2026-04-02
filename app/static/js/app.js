@@ -283,6 +283,7 @@
         document.getElementById('processBtnIcon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
         pdfInput.value = '';
         welcomeUploadZone.classList.remove('uploading');
+        previewWarning.classList.remove('visible');
         checkReady();
 
         // Go back to welcome screen
@@ -351,6 +352,8 @@
     });
 
     // ── Keyword detection ──
+    const previewWarning = document.getElementById('previewWarning');
+
     async function detectKeywords() {
         const resp = await api('POST', '/api/v1/detect', { file_id: fileId, party: currentParty });
         const data = await resp.json();
@@ -360,8 +363,9 @@
             showStampMarkerOnPage(detectedPosition.page, detectedPosition.x, detectedPosition.y);
             const wrapper = pagesContainer.querySelector(`[data-page-num="${detectedPosition.page}"]`);
             if (wrapper) wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            previewWarning.classList.remove('visible');
         } else {
-            showStatus('loading', '未识别到盖章位置，请在预览中点击指定');
+            previewWarning.classList.add('visible');
         }
     }
 
@@ -385,6 +389,7 @@
 
                 showStampMarkerOnCanvas(canvas, x, y);
                 showStatus('success', `已指定盖章位置: 第 ${pageNum + 1} 页`);
+                previewWarning.classList.remove('visible');
                 checkReady();
             });
         });
