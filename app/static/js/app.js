@@ -233,6 +233,33 @@
         if (currentPage < totalPages - 1) goToPage(currentPage + 1);
     });
 
+    // ── Result preview ──
+    async function previewResultPdf(taskId) {
+        try {
+            const resp = await fetch(`/api/v1/download/${taskId}`);
+            if (!resp.ok) return;
+            const data = await resp.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument({ data }).promise;
+            isWordUpload = false;
+            totalPages = pdfDoc.numPages;
+            currentPage = 0;
+            previewTitle.textContent = '处理结果预览';
+            pageInfo.textContent = `1 / ${totalPages}`;
+            previewNav.hidden = false;
+
+            const page = await pdfDoc.getPage(1);
+            const scale = (canvasWrap.clientWidth - 48) / page.getViewport({ scale: 1 }).width;
+            const viewport = page.getViewport({ scale: Math.min(scale, 2) });
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            stampMarker.hidden = true;
+        } catch (e) {
+            console.error('Result preview failed:', e);
+        }
+    }
+
     // ── Keyword detection ──
     async function detectKeywords() {
         const resp = await api('POST', '/api/v1/detect', { file_id: fileId });
@@ -403,6 +430,9 @@
             processBtn.classList.add('download');
             processBtnText.textContent = '下载结果 PDF';
             newTaskBtn.hidden = false;
+
+            // Preview the result PDF
+            await previewResultPdf(taskId);
 
             // Add to history
             addHistory(lastFileName, taskId);
