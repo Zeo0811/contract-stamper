@@ -44,7 +44,7 @@
                     <span class="admin-list-name">${u.username}</span>
                     <span class="admin-role-badge ${u.role === 'admin' ? 'role-admin' : 'role-user'}">${u.role === 'admin' ? '管理员' : '用户'}</span>
                 </div>
-                ${u.username === 'admin' ? '<span class="admin-list-hint">默认管理员</span>' : `<button class="btn-danger" onclick="deleteUser('${u.username}')">删除</button>`}
+                ${u.username === 'admin' ? '<span class="admin-list-hint">默认管理员</span>' : `<button class="btn-danger" onclick="deleteUser('${u.username}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>删除</button>`}
             </div>
         `).join('');
     }
@@ -103,7 +103,7 @@
                     <img src="${s.url}" class="admin-stamp-thumb" alt="${s.company}">
                     <span class="admin-list-name">${s.company}</span>
                 </div>
-                <button class="btn-danger" onclick="deleteStamp('${s.filename}')">删除</button>
+                <button class="btn-danger" onclick="deleteStamp('${s.filename}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>删除</button>
             </div>
         `).join('');
     }

@@ -27,7 +27,7 @@
             <form id="loginForm" class="login-form">
                 <input type="text" name="username" placeholder="用户名" class="input-field" autofocus>
                 <input type="password" name="password" placeholder="密码" class="input-field">
-                <button type="submit" class="btn-primary" style="width:100%;padding:13px;">登录</button>
+                <button type="submit" class="btn-primary" style="width:100%;padding:13px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>登录</button>
             </form>
             <p class="error-text" id="loginError" hidden>用户名或密码错误</p>
         </div>
@@ -73,8 +73,8 @@
         <div class="header-right">
             <span class="header-user" id="headerUser"></span>
             <span class="admin-badge" id="adminBadge" hidden>ADMIN</span>
-            <a href="/admin" class="header-admin-link" id="adminLink" hidden>管理后台</a>
-            <button class="header-logout" id="logoutBtn">退出</button>
+            <a href="/admin" class="header-admin-link" id="adminLink" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>管理后台</a>
+            <button class="header-logout" id="logoutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>退出</button>
         </div>
         {% endif %}
     </header>
@@ -125,7 +125,7 @@
                 <label class="section-label">合同文件</label>
                 <div class="file-info">
                     <span class="file-name" id="pdfFileName"></span>
-                    <button class="btn-text" id="pdfClear">更换</button>
+                    <button class="btn-text" id="pdfClear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>更换</button>
                 </div>
             </section>
 
@@ -171,6 +171,7 @@
             <section class="panel-section">
                 <div class="action-row">
                     <button class="btn-primary btn-process" id="processBtn" disabled>
+                        <svg id="processBtnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         <span id="processBtnText">开始处理</span>
                         <div class="btn-progress" id="btnProgress"></div>
                     </button>

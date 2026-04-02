@@ -185,6 +185,9 @@ body {
     text-decoration: none;
     padding: 4px 0;
     border-bottom: 1px solid rgba(255,255,255,.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     transition: color var(--dur) var(--ease);
 }
 .header-admin-link:hover, .header-back-link:hover { color: #fff; }
@@ -199,6 +202,9 @@ body {
     font-weight: 500;
     cursor: pointer;
     font-family: var(--font);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     transition: background var(--dur) var(--ease);
 }
 .header-logout:hover { background: rgba(255,255,255,.22); }
@@ -556,6 +562,10 @@ body {
     font-family: var(--font);
     position: relative;
     overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     transition: background var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 
@@ -605,6 +615,9 @@ body {
     cursor: pointer;
     font-family: var(--font);
     font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     transition: opacity var(--dur) var(--ease);
 }
 .btn-text:hover { opacity: .7; }
@@ -619,6 +632,9 @@ body {
     font-weight: 600;
     cursor: pointer;
     font-family: var(--font);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     transition: all var(--dur) var(--ease);
 }
 .btn-secondary:hover { background: var(--primary-bd); }
@@ -633,9 +649,19 @@ body {
     font-weight: 500;
     cursor: pointer;
     font-family: var(--font);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     transition: all var(--dur) var(--ease);
 }
 .btn-danger:hover { background: var(--danger); color: #fff; }
+
+/* Button & link icons */
+.btn-primary svg, .btn-secondary svg, .btn-text svg, .btn-danger svg,
+.header-logout svg, .header-admin-link svg, .header-back-link svg {
+    width: 15px; height: 15px; flex-shrink: 0;
+}
+.btn-process svg { width: 16px; height: 16px; }
 
 .action-row {
     display: flex; gap: 8px; align-items: stretch;
@@ -733,8 +759,12 @@ body {
     cursor: pointer;
     font-family: var(--font);
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     transition: opacity var(--dur) var(--ease);
 }
+.history-dl svg { width: 13px; height: 13px; }
 .history-dl:hover { opacity: .7; }
 
 /* ══════════════════════════════════════════
