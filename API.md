@@ -236,7 +236,7 @@ Content-Type: application/json
 | `party_b_position.x` | float | Yes | - | X coordinate in PDF points |
 | `party_b_position.y` | float | Yes | - | Y coordinate in PDF points |
 | `riding_seam` | boolean | No | true | Whether to add riding seam stamps across all pages |
-| `scan_effect` | integer | No | 0 | Scan quality slider (0=no effect, 1-39=heavy, 40-79=medium, 80-100=light) |
+| `scan_effect` | integer | No | 50 | Scan quality slider (0=no effect, 1-39=heavy, 40-79=medium, 80-100=light) |
 | `original_filename` | string | No | "" | Original filename, used for the download filename |
 
 **Response:**

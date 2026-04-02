@@ -32,7 +32,7 @@ class StampRequest(BaseModel):
     stamp_id: str
     party_b_position: Position | None = None
     riding_seam: bool = True
-    scan_effect: int = 0
+    scan_effect: int = 50  # 0=off, 1-39=heavy, 40-79=medium, 80-100=light
     original_filename: str = ""
 
 
