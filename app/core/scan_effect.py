@@ -18,9 +18,10 @@ def scan_params_from_slider(value: int) -> dict:
             "dpi": 300,
             "brightness_shift": 0.02 * (1 - t),
             "noise_amount": 1.5 * (1 - t),
-            "tilt_max": 0.4 * (1 - t),
+            "tilt_max": 0.8 * (1 - t),
             "blur_radius": 0.3 * (1 - t),
             "edge_shadow": 0.1 * (1 - t),
+            "corner_shadow": 0.15 * (1 - t),
             "brightness_nonuniform": 0.01 * (1 - t),
             "text_soften": 0.2 * (1 - t),
             "jpeg_quality": 95,
@@ -32,9 +33,10 @@ def scan_params_from_slider(value: int) -> dict:
             "dpi": int(200 + 100 * t),
             "brightness_shift": 0.05 - 0.03 * t,
             "noise_amount": 4 - 2.5 * t,
-            "tilt_max": 0.6 - 0.4 * t,
+            "tilt_max": 1.5 - 0.7 * t,
             "blur_radius": 0.6 - 0.3 * t,
             "edge_shadow": 0.25 - 0.15 * t,
+            "corner_shadow": 0.35 - 0.2 * t,
             "brightness_nonuniform": 0.03 - 0.02 * t,
             "text_soften": 0.5 - 0.3 * t,
             "jpeg_quality": int(85 + 10 * t),
@@ -46,9 +48,10 @@ def scan_params_from_slider(value: int) -> dict:
             "dpi": int(150 + 50 * t),
             "brightness_shift": 0.08 - 0.03 * t,
             "noise_amount": 7 - 3 * t,
-            "tilt_max": 1.2 - 0.6 * t,
+            "tilt_max": 2.5 - 1.0 * t,
             "blur_radius": 0.9 - 0.3 * t,
             "edge_shadow": 0.4 - 0.15 * t,
+            "corner_shadow": 0.5 - 0.15 * t,
             "brightness_nonuniform": 0.05 - 0.02 * t,
             "text_soften": 0.8 - 0.3 * t,
             "jpeg_quality": int(75 + 10 * t),
@@ -160,6 +163,44 @@ def _apply_edge_shadow(img: Image.Image, strength: float) -> Image.Image:
     return Image.fromarray(arr)
 
 
+def _apply_corner_shadow(img: Image.Image, strength: float) -> Image.Image:
+    """Add darkening at all four corners, simulating scanner lid shadow
+    or phone camera vignetting. Uses smooth radial gradients from each corner.
+    """
+    if strength <= 0:
+        return img
+    w, h = img.size
+    arr = np.array(img, dtype=np.float32)
+
+    # Create shadow mask starting at 1.0 (no shadow)
+    shadow = np.ones((h, w), dtype=np.float32)
+
+    # Corner radius as fraction of the smaller dimension
+    radius = min(w, h) * 0.35
+
+    # Four corners with slightly different intensities for realism
+    corners = [
+        (0, 0, strength),                          # top-left
+        (w, 0, strength * 0.85),                    # top-right
+        (0, h, strength * 0.9),                     # bottom-left
+        (w, h, strength * 1.1),                     # bottom-right (strongest)
+    ]
+
+    y_coords, x_coords = np.mgrid[0:h, 0:w]
+
+    for cx, cy, s in corners:
+        dist = np.sqrt((x_coords - cx) ** 2 + (y_coords - cy) ** 2)
+        # Smooth falloff: darken when close to corner
+        corner_mask = np.clip(dist / radius, 0, 1)
+        # Invert: 0 at corner, 1 far away -> darken factor
+        darken = 1.0 - s * 0.4 * (1.0 - corner_mask) ** 2
+        shadow = np.minimum(shadow, darken)
+
+    arr *= shadow[:, :, np.newaxis]
+    arr = np.clip(arr, 0, 255).astype(np.uint8)
+    return Image.fromarray(arr)
+
+
 def apply_scan_to_image(img: Image.Image, params: dict) -> Image.Image:
     """Apply realistic scan effects to a single page image.
 
@@ -170,6 +211,7 @@ def apply_scan_to_image(img: Image.Image, params: dict) -> Image.Image:
     4. Noise (sensor noise)
     5. Tilt (page misalignment)
     6. Edge shadow (page lift)
+    7. Corner shadow (four-corner darkening)
     """
     result = img.convert("RGB")
     result = _apply_brightness_shift(result, params["brightness_shift"])
@@ -178,4 +220,5 @@ def apply_scan_to_image(img: Image.Image, params: dict) -> Image.Image:
     result = _apply_noise(result, params["noise_amount"])
     result = _apply_tilt(result, params["tilt_max"])
     result = _apply_edge_shadow(result, params["edge_shadow"])
+    result = _apply_corner_shadow(result, params.get("corner_shadow", 0))
     return result
