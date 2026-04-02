@@ -13,8 +13,9 @@
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
 <body>
+    <!-- ══ Login Overlay (modal, always on top) ══ -->
     {% if not authenticated %}
-    <div class="login-screen">
+    <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
             <img src="/static/logo.png" alt="Logo" class="login-logo">
             <h2>十字路口 · 法务助手</h2>
@@ -58,18 +59,20 @@
     </script>
     {% endif %}
 
-    {% if authenticated %}
+    <!-- ══ Header ══ -->
     <header class="app-header">
         <div class="header-left">
             <img src="/static/logo.png" alt="Logo" class="header-logo">
             <h1>十字路口 · 法务助手</h1>
         </div>
+        {% if authenticated %}
         <div class="header-right">
             <span class="header-user" id="headerUser"></span>
             <span class="admin-badge" id="adminBadge" hidden>ADMIN</span>
             <a href="/admin" class="header-admin-link" id="adminLink" hidden>管理后台</a>
             <button class="header-logout" id="logoutBtn">退出</button>
         </div>
+        {% endif %}
     </header>
 
     <!-- ══ Welcome Screen ══ -->
@@ -79,6 +82,7 @@
             <h2 class="welcome-title">法务助手</h2>
             <p class="welcome-desc">上传合同文件，自动识别盖章位置<br>生成骑缝章与模拟扫描效果</p>
 
+            {% if authenticated %}
             <div class="welcome-upload" id="welcomeUploadZone">
                 <input type="file" id="pdfInput" accept=".pdf,.docx,.doc" hidden>
                 <div class="welcome-upload-content">
@@ -105,13 +109,14 @@
                     <div class="history-empty">暂无记录</div>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 
+    {% if authenticated %}
     <!-- ══ Workspace ══ -->
     <main class="workspace" id="workspace">
         <aside class="control-panel">
-            <!-- File info -->
             <section class="panel-section">
                 <label class="section-label">合同文件</label>
                 <div class="file-info">
@@ -120,7 +125,6 @@
                 </div>
             </section>
 
-            <!-- Stamp selection -->
             <section class="panel-section">
                 <label class="section-label">选择印章</label>
                 <div class="stamp-grid" id="stampGrid">
@@ -128,7 +132,6 @@
                 </div>
             </section>
 
-            <!-- Settings -->
             <section class="panel-section">
                 <label class="section-label">盖章设置</label>
                 <div class="setting-row">
@@ -152,7 +155,6 @@
                 </div>
             </section>
 
-            <!-- Scan effect -->
             <section class="panel-section">
                 <label class="section-label">扫描效果</label>
                 <div class="setting-row">
@@ -162,7 +164,6 @@
                 </div>
             </section>
 
-            <!-- Actions -->
             <section class="panel-section">
                 <div class="action-row">
                     <button class="btn-primary btn-process" id="processBtn" disabled>
@@ -175,12 +176,10 @@
                 </div>
             </section>
 
-            <!-- Status -->
             <div class="status-bar" id="statusBar" hidden>
                 <span id="statusText"></span>
             </div>
 
-            <!-- History in sidebar -->
             <section class="panel-section">
                 <label class="section-label">处理记录</label>
                 <div class="history-list" id="sidebarHistoryList">
@@ -189,7 +188,6 @@
             </section>
         </aside>
 
-        <!-- Preview -->
         <section class="preview-panel">
             <div class="preview-header">
                 <span id="previewTitle">合同预览</span>
@@ -204,7 +202,6 @@
         </section>
     </main>
 
-    <!-- Fireworks -->
     <canvas id="fireworks" onclick="stopFireworks()"></canvas>
     <div class="fw-hint">点击任意位置关闭</div>
 
