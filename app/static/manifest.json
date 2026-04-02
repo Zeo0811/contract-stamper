@@ -1,0 +1,16 @@
+{
+  "name": "十字路口 · 法务助手",
+  "short_name": "法务助手",
+  "description": "合同自动盖章工具 — 上传合同，自动识别盖章位置，生成骑缝章与模拟扫描效果",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#407600",
+  "icons": [
+    { "src": "/static/icons/icon-48x48.png",   "sizes": "48x48",   "type": "image/png" },
+    { "src": "/static/icons/icon-64x64.png",   "sizes": "64x64",   "type": "image/png" },
+    { "src": "/static/icons/icon-128x128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "/static/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/static/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

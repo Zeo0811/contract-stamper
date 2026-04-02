@@ -109,68 +109,63 @@ contract-stamper/
 
 ## API 接口
 
+完整 API 文档见 **[API.md](API.md)**。
+
 Base URL: `/api/v1`，需要 `Authorization: Bearer <API_KEY>` 认证。
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/upload` | 上传合同文件（PDF/Word） |
-| POST | `/upload/stamp` | 上传印章 PNG |
-| POST | `/detect` | 自动识别盖章位置 |
-| POST | `/stamp` | 执行盖章处理（异步） |
-| GET | `/result/{task_id}` | 查询处理状态 |
-| GET | `/download/{task_id}` | 下载处理结果 |
+| POST | `/upload` | 上传合同文件（PDF/Word），返回 file_id |
+| POST | `/upload/stamp` | 上传印章 PNG，返回 stamp_id |
 | GET | `/stamps/list` | 获取预置印章列表 |
+| POST | `/detect` | 自动识别盖章位置（甲方/乙方） |
+| POST | `/stamp` | 执行盖章处理（异步），返回 task_id |
+| GET | `/result/{task_id}` | 查询处理状态和进度 |
+| GET | `/download/{task_id}` | 下载处理结果 PDF |
 | POST | `/login` | 用户登录 |
 | GET | `/me` | 获取当前用户信息 |
 
-### API 调用示例
+### 快速示例
 
 ```bash
-# 上传合同
-curl -X POST http://localhost:8000/api/v1/upload \
-  -H "Authorization: Bearer dev-key" \
-  -F "file=@contract.docx"
+API="https://stamp.zeooo.cc"
+KEY="YOUR_API_KEY"
 
-# 识别盖章位置
-curl -X POST http://localhost:8000/api/v1/detect \
-  -H "Authorization: Bearer dev-key" \
+# 上传 → 检测 → 盖章 → 下载
+FILE_ID=$(curl -s -X POST "$API/api/v1/upload" \
+  -H "Authorization: Bearer $KEY" \
+  -F "file=@contract.docx" | jq -r '.file_id')
+
+STAMP_ID=$(curl -s -X POST "$API/api/v1/upload/stamp" \
+  -H "Authorization: Bearer $KEY" \
+  -F "file=@seal.png" | jq -r '.stamp_id')
+
+DETECT=$(curl -s -X POST "$API/api/v1/detect" \
+  -H "Authorization: Bearer $KEY" \
   -H "Content-Type: application/json" \
-  -d '{"file_id": "abc123", "party": "乙方"}'
+  -d "{\"file_id\": \"$FILE_ID\", \"party\": \"乙方\"}")
 
-# 执行盖章
-curl -X POST http://localhost:8000/api/v1/stamp \
-  -H "Authorization: Bearer dev-key" \
+TASK_ID=$(curl -s -X POST "$API/api/v1/stamp" \
+  -H "Authorization: Bearer $KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-    "file_id": "abc123",
-    "stamp_id": "stamp456",
-    "party_b_position": {"page": 4, "x": 400, "y": 650},
-    "riding_seam": true,
-    "scan_effect": 50,
-    "original_filename": "合同.docx"
-  }'
+  -d "{
+    \"file_id\": \"$FILE_ID\",
+    \"stamp_id\": \"$STAMP_ID\",
+    \"party_b_position\": $(echo $DETECT | jq '.positions[0]'),
+    \"riding_seam\": true,
+    \"scan_effect\": 50,
+    \"original_filename\": \"contract.docx\"
+  }" | jq -r '.task_id')
 
-# 查询状态
-curl http://localhost:8000/api/v1/result/task789 \
-  -H "Authorization: Bearer dev-key"
+# 轮询等待完成
+while [ "$(curl -s "$API/api/v1/result/$TASK_ID" \
+  -H "Authorization: Bearer $KEY" | jq -r '.status')" != "completed" ]; do
+  sleep 1
+done
 
-# 下载结果
-curl -O http://localhost:8000/api/v1/download/task789 \
-  -H "Authorization: Bearer dev-key"
+curl -o stamped.pdf "$API/api/v1/download/$TASK_ID" \
+  -H "Authorization: Bearer $KEY"
 ```
-
-## 扫描效果参数
-
-滑块 0-100，数值越低效果越重：
-
-| 参数 | 高质量 (80-100) | 中等 (40-80) | 低质量 (0-40) |
-|------|----------------|-------------|--------------|
-| 页面倾斜 | 0-0.8° | 0.8-1.5° | 1.5-2.5° |
-| 传感器噪点 | 极少 | 少量 | 明显 |
-| 亮度偏移 | 微弱 | 轻微 | 明显 |
-| 文字柔化 | 极轻 | 轻微 | 明显 |
-| 边缘阴影 | 微弱 | 轻微 | 明显 |
-| 四角暗角 | 微弱 | 中等 | 明显 |
 
 ## License
 
