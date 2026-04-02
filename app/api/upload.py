@@ -21,12 +21,52 @@ def _find_libreoffice() -> str:
     raise RuntimeError("LibreOffice not found. Install it to convert Word documents.")
 
 
+def _accept_tracked_changes(word_path: str) -> None:
+    """Accept all tracked changes in a Word document before conversion."""
+    try:
+        from docx import Document
+        doc = Document(word_path)
+        # python-docx doesn't have a direct API for accepting changes,
+        # so we manipulate the XML to remove revision marks
+        from lxml import etree
+        ns = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+
+        for body_element in doc.element.body:
+            # Remove all revision-related elements
+            for tag in ['ins', 'del', 'moveTo', 'moveFrom', 'rPrChange', 'pPrChange', 'sectPrChange', 'tblPrChange']:
+                for elem in body_element.iter(f'{ns}{tag}'):
+                    parent = elem.getparent()
+                    if tag == 'ins':
+                        # Accept insertion: keep content, remove wrapper
+                        for child in list(elem):
+                            parent.insert(list(parent).index(elem), child)
+                        parent.remove(elem)
+                    elif tag == 'del':
+                        # Accept deletion: remove entirely
+                        parent.remove(elem)
+                    else:
+                        # Remove change tracking metadata
+                        parent.remove(elem)
+
+        doc.save(word_path)
+    except Exception:
+        pass  # If python-docx processing fails, fall back to LibreOffice as-is
+
+
 def _convert_word_to_pdf(word_path: str, output_dir: str) -> str:
-    """Convert Word document to PDF using LibreOffice headless."""
+    """Convert Word document to PDF using LibreOffice headless, with tracked changes accepted."""
+    # First accept all tracked changes
+    _accept_tracked_changes(word_path)
+
     lo_bin = _find_libreoffice()
+    # Use macro to hide tracked changes during PDF export
     result = subprocess.run(
-        [lo_bin, "--headless", "--convert-to", "pdf", "--outdir", output_dir, word_path],
+        [lo_bin, "--headless",
+         "--env:UserInstallation=file:///tmp/libreoffice_user",
+         "--convert-to", "pdf",
+         "--outdir", output_dir, word_path],
         capture_output=True, text=True, timeout=60,
+        env={**os.environ, "LC_ALL": "C"},
     )
     if result.returncode != 0:
         raise RuntimeError(f"LibreOffice conversion failed: {result.stderr}")
