@@ -408,6 +408,7 @@
             party_b_position: { page: pos.page, x: pdfX, y: pdfY },
             riding_seam: seamToggle.checked,
             scan_effect: parseInt(scanSlider.value),
+            original_filename: lastFileName,
         };
 
         const resp = await api('POST', '/api/v1/stamp', body);

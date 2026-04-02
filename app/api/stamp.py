@@ -32,6 +32,7 @@ class StampRequest(BaseModel):
     party_b_position: Position | None = None
     riding_seam: bool = True
     scan_effect: int = 0
+    original_filename: str = ""
 
 
 def _process_stamp(task_id: str, req: StampRequest):
@@ -115,7 +116,7 @@ async def stamp(
     for tid in old_tasks:
         del tasks[tid]
     task_id = uuid.uuid4().hex[:12]
-    tasks[task_id] = {"status": "pending", "progress": 0}
+    tasks[task_id] = {"status": "pending", "progress": 0, "original_filename": req.original_filename}
     thread = threading.Thread(target=_process_stamp, args=(task_id, req))
     thread.start()
     return {"task_id": task_id}

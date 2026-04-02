@@ -38,8 +38,16 @@ async def download(
     result_path = task["result_path"]
     if not os.path.exists(result_path):
         raise HTTPException(status_code=404, detail="Result file not found")
+    # Use original filename if available
+    original = task.get("original_filename", "")
+    if original:
+        base = os.path.splitext(original)[0]
+        download_name = f"{base}.pdf"
+    else:
+        download_name = f"stamped_{task_id}.pdf"
+
     return FileResponse(
         result_path,
         media_type="application/pdf",
-        filename=f"stamped_{task_id}.pdf",
+        filename=download_name,
     )
