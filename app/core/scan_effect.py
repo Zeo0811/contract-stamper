@@ -18,7 +18,7 @@ def scan_params_from_slider(value: int) -> dict:
             "dpi": 300,
             "brightness_shift": 0.02 * (1 - t),
             "noise_amount": 1.5 * (1 - t),
-            "tilt_max": 0.2 * (1 - t),
+            "tilt_max": 0.4 * (1 - t),
             "blur_radius": 0.3 * (1 - t),
             "edge_shadow": 0.1 * (1 - t),
             "brightness_nonuniform": 0.01 * (1 - t),

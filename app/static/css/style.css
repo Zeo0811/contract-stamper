@@ -377,16 +377,25 @@ body {
     border-bottom: 1px solid var(--border); background: var(--card); font-size: 14px; color: var(--gray);
 }
 
-.preview-nav { display: flex; align-items: center; gap: 8px; }
+.page-count { font-size: 12px; font-family: var(--font-mono); color: var(--gray); }
 
-#pageInfo { font-size: 13px; font-family: var(--font-mono); min-width: 50px; text-align: center; }
-
-.preview-canvas-wrap {
-    flex: 1; overflow: auto; display: flex; align-items: flex-start; justify-content: center;
-    padding: 24px; position: relative;
+.preview-scroll {
+    flex: 1; overflow-y: auto; position: relative;
+    padding: 20px;
 }
 
-#pdfCanvas { box-shadow: var(--shadow-card); border-radius: 2px; max-width: 100%; }
+.pages-container {
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+
+.pages-container canvas {
+    box-shadow: var(--shadow-card); border-radius: 2px; max-width: 100%;
+}
+
+.page-label {
+    font-size: 11px; color: var(--gray); font-family: var(--font-mono);
+    margin-bottom: 4px; text-align: center;
+}
 
 /* ── Stamp Marker ── */
 .stamp-marker { position: absolute; cursor: move; z-index: 10; }

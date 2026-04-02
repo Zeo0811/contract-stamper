@@ -126,8 +126,8 @@
                 <label class="section-label">扫描效果</label>
                 <div class="setting-row">
                     <span>效果强度</span>
-                    <input type="range" id="scanSlider" min="0" max="100" value="0" class="slider">
-                    <span id="scanVal">关闭</span>
+                    <input type="range" id="scanSlider" min="0" max="100" value="50" class="slider">
+                    <span id="scanVal">中度</span>
                 </div>
             </section>
 
@@ -162,14 +162,12 @@
         <section class="preview-panel">
             <div class="preview-header">
                 <span id="previewTitle">上传合同以预览</span>
-                <div class="preview-nav" id="previewNav" hidden>
-                    <button class="btn-icon" id="prevPage">&lt;</button>
-                    <span id="pageInfo">1 / 1</span>
-                    <button class="btn-icon" id="nextPage">&gt;</button>
-                </div>
+                <span class="page-count" id="pageCount"></span>
             </div>
-            <div class="preview-canvas-wrap" id="canvasWrap">
-                <canvas id="pdfCanvas"></canvas>
+            <div class="preview-scroll" id="previewScroll">
+                <div class="pages-container" id="pagesContainer">
+                    <!-- Canvases will be dynamically added here -->
+                </div>
                 <div class="stamp-marker" id="stampMarker" hidden>
                     <div class="stamp-marker-ring"></div>
                 </div>

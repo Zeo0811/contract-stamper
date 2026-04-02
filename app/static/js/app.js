@@ -5,7 +5,6 @@
     let fileId = null;
     let stampId = null;
     let pdfDoc = null;
-    let currentPage = 0;
     let totalPages = 0;
     let detectedPosition = null;
     let manualPosition = null;
@@ -38,13 +37,10 @@
     const statusBar = document.getElementById('statusBar');
     const statusText = document.getElementById('statusText');
 
-    const canvas = document.getElementById('pdfCanvas');
-    const canvasWrap = document.getElementById('canvasWrap');
+    const previewScroll = document.getElementById('previewScroll');
+    const pagesContainer = document.getElementById('pagesContainer');
     const previewTitle = document.getElementById('previewTitle');
-    const previewNav = document.getElementById('previewNav');
-    const prevPage = document.getElementById('prevPage');
-    const nextPage = document.getElementById('nextPage');
-    const pageInfo = document.getElementById('pageInfo');
+    const pageCount = document.getElementById('pageCount');
     const stampMarker = document.getElementById('stampMarker');
 
     const historyList = document.getElementById('historyList');
@@ -102,36 +98,136 @@
 
         if (isWordUpload) {
             pdfDoc = null;
-            currentPage = 0;
-            renderPageFromServer(0);
+            renderAllPagesFromServer();
         } else {
             const pdfData = await file.arrayBuffer();
             pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
-            currentPage = 0;
-            renderPage(0);
+            totalPages = pdfDoc.numPages;
+            await renderAllPages();
         }
-        previewNav.hidden = false;
 
         await detectKeywords();
         checkReady();
         hideStatus();
     }
 
-    function renderPageFromServer(num) {
-        if (num < 0 || num >= previewUrls.length) return;
-        const img = new window.Image();
-        img.onload = function () {
-            const maxW = canvasWrap.clientWidth - 48;
-            const scale = Math.min(maxW / img.width, 2);
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
+    // ── Multi-page rendering ──
+    async function renderAllPages() {
+        pagesContainer.innerHTML = '';
+        pageCount.textContent = `${totalPages} 页`;
+        previewTitle.textContent = '合同预览';
+
+        for (let i = 0; i < totalPages; i++) {
+            const page = await pdfDoc.getPage(i + 1);
+            const maxW = previewScroll.clientWidth - 40;
+            const scale = Math.min(maxW / page.getViewport({ scale: 1 }).width, 2);
+            const viewport = page.getViewport({ scale });
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'page-wrapper';
+            wrapper.dataset.pageNum = i;
+
+            const label = document.createElement('div');
+            label.className = 'page-label';
+            label.textContent = `第 ${i + 1} 页`;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            canvas.dataset.pageNum = i;
+
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            currentPage = num;
-            pageInfo.textContent = `${num + 1} / ${totalPages}`;
-            previewTitle.textContent = '合同预览';
-        };
-        img.src = previewUrls[num];
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(canvas);
+            pagesContainer.appendChild(wrapper);
+        }
+
+        // Enable click-to-place on all canvases
+        enableCanvasClicks();
+    }
+
+    function renderAllPagesFromServer() {
+        pagesContainer.innerHTML = '';
+        pageCount.textContent = `${totalPages} 页`;
+        previewTitle.textContent = '合同预览';
+
+        for (let i = 0; i < previewUrls.length; i++) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'page-wrapper';
+            wrapper.dataset.pageNum = i;
+
+            const label = document.createElement('div');
+            label.className = 'page-label';
+            label.textContent = `第 ${i + 1} 页`;
+
+            const canvas = document.createElement('canvas');
+            canvas.dataset.pageNum = i;
+
+            const img = new window.Image();
+            img.onload = function () {
+                const maxW = previewScroll.clientWidth - 40;
+                const scale = Math.min(maxW / img.width, 2);
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = previewUrls[i];
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(canvas);
+            pagesContainer.appendChild(wrapper);
+        }
+
+        enableCanvasClicks();
+    }
+
+    // ── Result preview ──
+    async function previewResultPdf(taskId) {
+        try {
+            const resp = await api('GET', `/api/v1/download/${taskId}`);
+            if (!resp.ok) return;
+            const data = await resp.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument({ data }).promise;
+            isWordUpload = false;
+            totalPages = pdfDoc.numPages;
+            previewTitle.textContent = '处理结果预览';
+            stampMarker.hidden = true;
+
+            pagesContainer.innerHTML = '';
+            pageCount.textContent = `${totalPages} 页`;
+
+            for (let i = 0; i < totalPages; i++) {
+                const page = await pdfDoc.getPage(i + 1);
+                const maxW = previewScroll.clientWidth - 40;
+                const scale = Math.min(maxW / page.getViewport({ scale: 1 }).width, 2);
+                const viewport = page.getViewport({ scale });
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'page-wrapper';
+
+                const label = document.createElement('div');
+                label.className = 'page-label';
+                label.textContent = `第 ${i + 1} 页`;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                const ctx = canvas.getContext('2d');
+                await page.render({ canvasContext: ctx, viewport }).promise;
+
+                wrapper.appendChild(label);
+                wrapper.appendChild(canvas);
+                pagesContainer.appendChild(wrapper);
+            }
+
+            previewScroll.scrollTop = 0;
+        } catch (e) {
+            console.error('Result preview failed:', e);
+        }
     }
 
     setupUploadZone(pdfUploadZone, pdfInput, uploadPdf);
@@ -145,8 +241,8 @@
         fileId = null; pdfDoc = null; detectedPosition = null; manualPosition = null;
         isWordUpload = false; previewUrls = []; resultTaskId = null; isCompleted = false;
         pdfPlaceholder.hidden = false; pdfDone.hidden = true;
-        previewNav.hidden = true;
-        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        pagesContainer.innerHTML = '';
+        pageCount.textContent = '';
         previewTitle.textContent = '上传合同以预览';
         stampMarker.hidden = true;
         newTaskBtn.hidden = true;
@@ -157,7 +253,6 @@
         checkReady();
     }
 
-    // ── "Reset" button ──
     newTaskBtn.addEventListener('click', () => {
         resetContractState();
         showStatus('success', '已重置，请上传新合同');
@@ -169,7 +264,7 @@
         const resp = await api('GET', '/api/v1/stamps/list');
         const data = await resp.json();
         if (data.stamps.length === 0) {
-            stampGrid.innerHTML = '<div class="stamp-empty">暂无印章，请将 PNG 放入 app/static/stamps/</div>';
+            stampGrid.innerHTML = '<div class="stamp-empty">暂无印章，请在管理后台添加</div>';
             return;
         }
         stampGrid.innerHTML = data.stamps.map(s => `
@@ -183,11 +278,9 @@
             const card = e.target.closest('.stamp-card');
             if (!card) return;
 
-            // Deselect all, select this
             stampGrid.querySelectorAll('.stamp-card').forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
 
-            // Upload the stamp to server
             showStatus('loading', '加载印章中...');
             const imgResp = await fetch(card.dataset.url);
             const blob = await imgResp.blob();
@@ -205,65 +298,6 @@
 
     loadPresetStamps();
 
-    // ── PDF rendering ──
-    async function renderPage(num) {
-        const page = await pdfDoc.getPage(num + 1);
-        const scale = (canvasWrap.clientWidth - 48) / page.getViewport({ scale: 1 }).width;
-        const viewport = page.getViewport({ scale: Math.min(scale, 2) });
-
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d');
-        await page.render({ canvasContext: ctx, viewport }).promise;
-
-        currentPage = num;
-        pageInfo.textContent = `${num + 1} / ${totalPages}`;
-        previewTitle.textContent = '合同预览';
-        updateStampMarker(viewport);
-    }
-
-    function goToPage(num) {
-        if (isWordUpload || !pdfDoc) {
-            renderPageFromServer(num);
-        } else {
-            renderPage(num);
-        }
-    }
-
-    prevPage.addEventListener('click', () => {
-        if (currentPage > 0) goToPage(currentPage - 1);
-    });
-    nextPage.addEventListener('click', () => {
-        if (currentPage < totalPages - 1) goToPage(currentPage + 1);
-    });
-
-    // ── Result preview ──
-    async function previewResultPdf(taskId) {
-        try {
-            const resp = await fetch(`/api/v1/download/${taskId}`);
-            if (!resp.ok) return;
-            const data = await resp.arrayBuffer();
-            pdfDoc = await pdfjsLib.getDocument({ data }).promise;
-            isWordUpload = false;
-            totalPages = pdfDoc.numPages;
-            currentPage = 0;
-            previewTitle.textContent = '处理结果预览';
-            pageInfo.textContent = `1 / ${totalPages}`;
-            previewNav.hidden = false;
-
-            const page = await pdfDoc.getPage(1);
-            const scale = (canvasWrap.clientWidth - 48) / page.getViewport({ scale: 1 }).width;
-            const viewport = page.getViewport({ scale: Math.min(scale, 2) });
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            stampMarker.hidden = true;
-        } catch (e) {
-            console.error('Result preview failed:', e);
-        }
-    }
-
     // ── Party toggle ──
     let currentParty = '乙方';
     const partyToggle = document.getElementById('partyToggle');
@@ -273,7 +307,6 @@
         partyToggle.querySelectorAll('.party-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentParty = btn.dataset.party;
-        // Re-detect if file is already uploaded
         if (fileId) {
             detectedPosition = null;
             manualPosition = null;
@@ -290,61 +323,60 @@
         if (data.found && data.positions.length > 0) {
             detectedPosition = data.positions[0];
             showStatus('success', `已识别: "${detectedPosition.keyword}" 在第 ${detectedPosition.page + 1} 页`);
-            if (isWordUpload || !pdfDoc) {
-                renderPageFromServer(detectedPosition.page);
-            } else {
-                renderPage(detectedPosition.page);
-            }
+            showStampMarkerOnPage(detectedPosition.page, detectedPosition.x, detectedPosition.y);
+            // Scroll to the detected page
+            const wrapper = pagesContainer.querySelector(`[data-page-num="${detectedPosition.page}"]`);
+            if (wrapper) wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
             showStatus('loading', '未识别到盖章位置，请在预览中点击指定');
-            enableManualClick();
         }
     }
 
-    // ── Manual click positioning ──
-    function enableManualClick() {
-        canvasWrap.style.cursor = 'crosshair';
-        canvasWrap.addEventListener('click', onCanvasClick);
+    // ── Click-to-place on canvases ──
+    function enableCanvasClicks() {
+        pagesContainer.querySelectorAll('canvas').forEach(canvas => {
+            canvas.style.cursor = 'crosshair';
+            canvas.addEventListener('click', e => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const pageNum = parseInt(canvas.dataset.pageNum);
+
+                manualPosition = {
+                    page: pageNum,
+                    x: x * scaleX,
+                    y: y * scaleY,
+                };
+
+                showStampMarkerOnCanvas(canvas, x, y);
+                showStatus('success', `已指定盖章位置: 第 ${pageNum + 1} 页`);
+                checkReady();
+            });
+        });
     }
 
-    function onCanvasClick(e) {
+    function showStampMarkerOnPage(pageNum, pdfX, pdfY) {
+        const canvas = pagesContainer.querySelector(`canvas[data-page-num="${pageNum}"]`);
+        if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-
-        manualPosition = {
-            page: currentPage,
-            x: x * scaleX,
-            y: y * scaleY,
-        };
-
+        const scrollRect = previewScroll.getBoundingClientRect();
+        const scaleX = rect.width / canvas.width;
+        const scaleY = rect.height / canvas.height;
+        const cx = pdfX * scaleX;
+        const cy = pdfY * scaleY;
         stampMarker.hidden = false;
-        stampMarker.style.left = (rect.left - canvasWrap.getBoundingClientRect().left + x - 40) + 'px';
-        stampMarker.style.top = (rect.top - canvasWrap.getBoundingClientRect().top + y - 40) + 'px';
-
-        showStatus('success', `已指定盖章位置: 第 ${currentPage + 1} 页`);
-        canvasWrap.style.cursor = 'default';
-        canvasWrap.removeEventListener('click', onCanvasClick);
-        checkReady();
+        stampMarker.style.left = (rect.left - scrollRect.left + previewScroll.scrollLeft + cx - 40) + 'px';
+        stampMarker.style.top = (rect.top - scrollRect.top + previewScroll.scrollTop + cy - 40) + 'px';
     }
 
-    function updateStampMarker(viewport) {
-        const pos = detectedPosition;
-        if (!pos || pos.page !== currentPage) {
-            stampMarker.hidden = true;
-            return;
-        }
-        stampMarker.hidden = false;
+    function showStampMarkerOnCanvas(canvas, displayX, displayY) {
         const rect = canvas.getBoundingClientRect();
-        const wrapRect = canvasWrap.getBoundingClientRect();
-        const scaleX = rect.width / viewport.width;
-        const scaleY = rect.height / viewport.height;
-        const cx = pos.x * scaleX;
-        const cy = pos.y * scaleY;
-        stampMarker.style.left = (rect.left - wrapRect.left + cx - 40) + 'px';
-        stampMarker.style.top = (rect.top - wrapRect.top + cy - 40) + 'px';
+        const scrollRect = previewScroll.getBoundingClientRect();
+        stampMarker.hidden = false;
+        stampMarker.style.left = (rect.left - scrollRect.left + previewScroll.scrollLeft + displayX - 40) + 'px';
+        stampMarker.style.top = (rect.top - scrollRect.top + previewScroll.scrollTop + displayY - 40) + 'px';
     }
 
     // ── Draggable stamp marker ──
@@ -365,17 +397,30 @@
     document.addEventListener('mouseup', () => {
         if (!dragging) return;
         dragging = false;
-        const rect = canvas.getBoundingClientRect();
-        const wrapRect = canvasWrap.getBoundingClientRect();
-        const cx = stampMarker.offsetLeft + 40 - (rect.left - wrapRect.left);
-        const cy = stampMarker.offsetTop + 40 - (rect.top - wrapRect.top);
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        if (detectedPosition && detectedPosition.page === currentPage) {
-            detectedPosition.x = cx * scaleX;
-            detectedPosition.y = cy * scaleY;
-        } else {
-            manualPosition = { page: currentPage, x: cx * scaleX, y: cy * scaleY };
+        // Find which canvas the marker is over
+        const markerCx = stampMarker.offsetLeft + 40;
+        const markerCy = stampMarker.offsetTop + 40;
+        const canvases = pagesContainer.querySelectorAll('canvas');
+        for (const canvas of canvases) {
+            const scrollRect = previewScroll.getBoundingClientRect();
+            const rect = canvas.getBoundingClientRect();
+            const relLeft = rect.left - scrollRect.left + previewScroll.scrollLeft;
+            const relTop = rect.top - scrollRect.top + previewScroll.scrollTop;
+            if (markerCx >= relLeft && markerCx <= relLeft + rect.width &&
+                markerCy >= relTop && markerCy <= relTop + rect.height) {
+                const cx = markerCx - relLeft;
+                const cy = markerCy - relTop;
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const pageNum = parseInt(canvas.dataset.pageNum);
+                if (detectedPosition && detectedPosition.page === pageNum) {
+                    detectedPosition.x = cx * scaleX;
+                    detectedPosition.y = cy * scaleY;
+                } else {
+                    manualPosition = { page: pageNum, x: cx * scaleX, y: cy * scaleY };
+                }
+                break;
+            }
         }
     });
 
@@ -400,7 +445,6 @@
     }
 
     processBtn.addEventListener('click', async () => {
-        // If completed, clicking = download
         if (isCompleted) {
             if (resultTaskId) {
                 window.location.href = `/api/v1/download/${resultTaskId}`;
@@ -414,10 +458,11 @@
         const pos = detectedPosition || manualPosition;
         let pdfX, pdfY;
 
-        if (pdfDoc) {
+        if (pdfDoc && !isWordUpload) {
             const page = await pdfDoc.getPage(pos.page + 1);
             const viewport = page.getViewport({ scale: 1 });
-            const displayScale = canvas.width / viewport.width;
+            const canvas = pagesContainer.querySelector(`canvas[data-page-num="${pos.page}"]`);
+            const displayScale = canvas ? canvas.width / viewport.width : 1;
             pdfX = pos.x / displayScale;
             pdfY = pos.y / displayScale;
         } else {
@@ -448,20 +493,14 @@
             showStatus('success', '处理完成');
             setTimeout(() => { btnProgress.style.width = '0'; }, 500);
 
-            // Switch button to download mode
             isCompleted = true;
             processBtn.disabled = false;
             processBtn.classList.add('download');
             processBtnText.textContent = '下载结果 PDF';
             newTaskBtn.hidden = false;
 
-            // Preview the result PDF
             await previewResultPdf(taskId);
-
-            // Add to history
             addHistory(lastFileName, taskId);
-
-            // Launch fireworks
             launchFireworks();
         } else if (data.status === 'error') {
             showStatus('error', '处理失败: ' + (data.error || '未知错误'));
@@ -537,7 +576,6 @@
             const count = 60 + Math.random() * 60;
             const palette = [colors[Math.floor(Math.random() * colors.length)]];
             for (let c = 0; c < 2; c++) palette.push(colors[Math.floor(Math.random() * colors.length)]);
-
             for (let i = 0; i < count; i++) {
                 const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
                 const speed = 3 + Math.random() * 7;
@@ -567,29 +605,24 @@
                 return;
             }
             ctx.clearRect(0, 0, cvs.width, cvs.height);
-
             for (let i = fwParticles.length - 1; i >= 0; i--) {
                 const p = fwParticles[i];
                 p.life -= p.decay;
                 if (p.life <= 0) { fwParticles.splice(i, 1); continue; }
-
                 p.vy += 0.04;
                 p.vx *= 0.985;
                 p.x += p.vx;
                 p.y += p.vy;
-
                 const glow = p.size * p.life * 2;
                 ctx.globalAlpha = p.life * 0.3;
                 ctx.fillStyle = p.color;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, glow, 0, Math.PI * 2);
                 ctx.fill();
-
                 ctx.globalAlpha = Math.min(1, p.life * 1.5);
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
                 ctx.fill();
-
                 if (Math.random() > 0.92 && p.life > 0.3) {
                     ctx.globalAlpha = p.life;
                     ctx.fillStyle = '#fff';
@@ -598,12 +631,10 @@
                     ctx.fill();
                 }
             }
-
             ctx.globalAlpha = 1;
             fwAnimId = requestAnimationFrame(animate);
         }
         animate();
-
         setTimeout(() => { if (fwRunning) stopFireworks(); }, 5000);
     };
 
