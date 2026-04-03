@@ -1,56 +1,49 @@
-# Contract Stamper
+# 十字路口 · 法务助手
 
-An automated contract stamping tool that uploads Word/PDF contracts, auto-detects seal placement positions, applies digital seals with riding seam stamps, and simulates realistic scanning effects — outputting production-ready PDFs.
+合同自动盖章工具。上传 Word/PDF 合同和印章图片，自动识别盖章位置、生成骑缝章、模拟扫描效果，输出成品 PDF。
 
-## Features
+## 功能
 
-- **Multi-Format Upload** — Supports `.docx`, `.doc`, and `.pdf`. Word files are automatically converted to PDF (tracked changes are accepted, producing the final version).
-- **Auto Seal Detection** — Searches for keywords like "Party A (Seal)" / "Party B (Seal)" in the document to automatically locate stamp positions. Manual click-to-place is also supported when keywords are not found.
-- **Party Switching** — Toggle between Party A and Party B seal positions with one click.
-- **Riding Seam Stamps** — Automatically slices the seal image across all pages and places each strip along the right edge, with random offset and rotation for a realistic hand-stamped look.
-- **Scan Effect Simulation** — Adjustable intensity (light / medium / heavy) with a 7-layer processing pipeline: brightness shift, sensor noise, page tilt, text softening, non-uniform brightness, edge shadows, and four-corner darkening.
-- **Admin Dashboard** — User management (create/delete users, role control) and stamp management (upload seal PNGs with associated company names).
-- **Processing History** — View past stamping operations in-app with re-download support.
-- **Completion Animation** — Fireworks celebration on successful processing.
-- **RESTful API** — Full programmatic access to all features; supports MCP/Skill integration.
-- **Multi-User Auth** — Session token + Bearer API key authentication with role-based access control.
+- **Word/PDF 上传** — 支持 `.docx`、`.doc`、`.pdf`，Word 文件自动转 PDF（自动接受修订，输出最终版）
+- **自动识别盖章位置** — 搜索"甲方（盖章）"/"乙方（盖章）"等关键词，自动定位；未识别时支持手动点击指定
+- **甲方/乙方切换** — 一键切换识别甲方或乙方盖章位置
+- **骑缝章** — 按页数自动切割印章，每页右边缘放置，带随机偏移和旋转模拟手工效果
+- **模拟扫描效果** — 可调节强度（轻度/中度/重度），包含亮度偏移、传感器噪点、页面倾斜、文字柔化、边缘阴影、四角暗角等真实扫描特征
+- **管理后台** — 用户管理（增删用户、角色控制）、印章管理（上传印章 PNG + 公司主体名称）
+- **处理记录** — 页面内查看历史处理记录，支持重新下载
+- **完成动画** — 处理完成后播放烟花庆祝动画
+- **RESTful API** — 所有功能可通过 API 调用，支持 MCP/Skill 集成
 
-## Tech Stack
+## 技术栈
 
-| Layer | Technologies |
-|-------|-------------|
-| **Backend** | Python 3.11, FastAPI, PyMuPDF (fitz), Pillow, NumPy |
-| **Frontend** | Vanilla HTML/CSS/JS, PDF.js |
-| **Document Conversion** | LibreOffice (headless), python-docx |
-| **Deployment** | Docker, Railway |
+- **后端**: Python 3.11 + FastAPI + PyMuPDF + Pillow + NumPy
+- **前端**: Vanilla HTML/CSS/JS + PDF.js
+- **文档转换**: LibreOffice (headless) + python-docx
+- **部署**: Docker + Railway
 
-## Quick Start
+## 快速开始
 
-### Local Development
+### 本地运行
 
 ```bash
-# 1. Install Python 3.11 and LibreOffice
-# macOS
+# 1. 安装 Python 3.11 和 LibreOffice
 brew install python@3.11
 brew install --cask libreoffice
 
-# Ubuntu/Debian
-sudo apt install python3.11 python3.11-venv libreoffice
-
-# 2. Create virtual environment and install dependencies
+# 2. 创建虚拟环境并安装依赖
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# 3. Start the server
+# 3. 启动服务
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 
-# 4. Open in browser
+# 4. 打开浏览器
 # http://localhost:8000
-# Default admin credentials: admin / admin123
+# 默认管理员: admin / admin123
 ```
 
-### Docker
+### Docker 运行
 
 ```bash
 docker build -t contract-stamper .
@@ -60,208 +53,119 @@ docker run -p 8000:8000 \
   contract-stamper
 ```
 
-### Railway Deployment
+### Railway 部署
 
-1. Fork this repository
-2. Create a new Railway project and connect the GitHub repo
-3. Set environment variables:
-   - `ADMIN_PASSWORD` — Admin account password
-   - `API_KEY` — API access key
-   - `PORT` — Port number (auto-set by Railway)
+1. Fork 本仓库
+2. 在 Railway 创建新项目，连接 GitHub 仓库
+3. 设置环境变量：
+   - `ADMIN_PASSWORD` — 管理员密码
+   - `API_KEY` — API 访问密钥
+   - `PORT` — 端口（Railway 自动设置）
 
-## Environment Variables
+## 环境变量
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ADMIN_PASSWORD` | `admin123` | Admin account password |
-| `API_KEY` | `dev-key` | Bearer token for API authentication |
-| `WEB_PASSWORD` | `dev-pass` | Web interface password |
-| `PORT` | `8000` | HTTP server port |
-| `UPLOAD_DIR` | `/tmp/contract-stamper` | Temporary file storage directory |
-| `DATA_DIR` | `./data` | Persistent data storage (users, stamp metadata) |
-| `FILE_TTL_SECONDS` | `3600` | Auto-cleanup interval for uploaded/result files (seconds) |
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `ADMIN_PASSWORD` | `admin123` | 管理员账户密码 |
+| `API_KEY` | `dev-key` | API Bearer Token |
+| `PORT` | `8000` | 服务端口 |
+| `UPLOAD_DIR` | `/tmp/contract-stamper` | 文件存储目录 |
 
-## Project Structure
+## 项目结构
 
 ```
 contract-stamper/
 ├── app/
-│   ├── main.py              # FastAPI entry point, route mounting, auth endpoints
-│   ├── config.py             # Environment variable configuration
-│   ├── auth.py               # Multi-user auth system (token + API key)
+│   ├── main.py              # FastAPI 入口，路由挂载，认证端点
+│   ├── config.py             # 环境变量配置
+│   ├── auth.py               # 多用户认证系统（token + API Key）
 │   ├── api/
-│   │   ├── upload.py         # File upload (PDF/Word), Word→PDF conversion
-│   │   ├── detect.py         # Keyword-based seal position detection
-│   │   ├── stamp.py          # Async stamping (seal + riding seam + scan effect)
-│   │   ├── result.py         # Task status polling and result download
-│   │   └── admin.py          # Admin API (user/stamp management)
+│   │   ├── upload.py         # 文件上传（PDF/Word），Word→PDF 转换
+│   │   ├── detect.py         # 关键词自动识别盖章位置
+│   │   ├── stamp.py          # 异步盖章处理（乙方章 + 骑缝章 + 扫描效果）
+│   │   ├── result.py         # 处理结果查询与下载
+│   │   └── admin.py          # 管理后台 API（用户/印章管理）
 │   ├── core/
-│   │   ├── pdf_processor.py  # PDF reading and preview rendering
-│   │   ├── stamp_placer.py   # Keyword detection + seal overlay
-│   │   ├── seam_stamp.py     # Riding seam stamp slicing and placement
-│   │   └── scan_effect.py    # Scan effect simulation (7-layer pipeline)
+│   │   ├── pdf_processor.py  # PDF 读取、渲染预览图
+│   │   ├── stamp_placer.py   # 关键词检测 + 印章叠加
+│   │   ├── seam_stamp.py     # 骑缝章切割与放置
+│   │   └── scan_effect.py    # 模拟扫描效果（7 种效果叠加）
 │   ├── static/
-│   │   ├── css/style.css     # Green theme styling
-│   │   ├── js/
-│   │   │   ├── app.js        # Main page interaction logic
-│   │   │   └── admin.js      # Admin dashboard logic
-│   │   ├── stamps/           # Preset stamp directory (admin-managed)
-│   │   ├── icons/            # PWA icons (16–512px)
-│   │   ├── logo.png          # Brand logo
-│   │   ├── favicon.ico
-│   │   └── manifest.json     # PWA manifest
+│   │   ├── logo.png          # 十字路口 Logo
+│   │   ├── stamps/           # 预置印章目录（管理后台上传）
+│   │   ├── css/style.css     # 有机绿主题样式
+│   │   └── js/
+│   │       ├── app.js        # 主页面交互逻辑
+│   │       └── admin.js      # 管理后台交互逻辑
 │   └── templates/
-│       ├── index.html        # Main user interface
-│       └── admin.html        # Admin dashboard
-├── tests/
-│   ├── conftest.py           # Test fixtures (sample PDF, stamp)
-│   ├── test_detect.py        # Keyword detection tests
-│   ├── test_stamp_placer.py  # Stamp placement tests
-│   ├── test_seam_stamp.py    # Riding seam tests
-│   ├── test_scan_effect.py   # Scan effect tests
-│   └── test_integration.py   # End-to-end workflow tests
-├── Dockerfile                # Docker build configuration
-├── railway.toml              # Railway deployment configuration
-├── requirements.txt          # Python dependencies
-├── API.md                    # Full API reference
-└── .env.example              # Environment variable template
+│       ├── index.html        # 主页面
+│       └── admin.html        # 管理后台页面
+├── tests/                    # 测试文件
+├── Dockerfile                # Docker 构建配置
+├── railway.toml              # Railway 部署配置
+├── requirements.txt          # Python 依赖
+└── .env.example              # 环境变量示例
 ```
 
-## API Overview
+## API 接口
 
-Full API documentation is available in **[API.md](API.md)**.
+完整 API 文档见 **[API.md](API.md)**。
 
-**Base URL:** `/api/v1` — Requires `Authorization: Bearer <API_KEY>` header.
+Base URL: `/api/v1`，需要 `Authorization: Bearer <API_KEY>` 认证。
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/upload` | Upload a contract file (PDF/Word), returns `file_id` |
-| `POST` | `/upload/stamp` | Upload a seal PNG image, returns `stamp_id` |
-| `GET` | `/stamps/list` | List all preset stamps with metadata |
-| `POST` | `/detect` | Auto-detect seal positions by keyword (Party A/B) |
-| `POST` | `/stamp` | Start async stamping process, returns `task_id` |
-| `GET` | `/result/{task_id}` | Poll task status and progress (0–100%) |
-| `GET` | `/download/{task_id}` | Download the stamped PDF result |
-| `POST` | `/login` | User authentication, returns session token |
-| `GET` | `/me` | Get current user info |
-| `GET` | `/health` | Health check (no auth required) |
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/upload` | 上传合同文件（PDF/Word），返回 file_id |
+| POST | `/upload/stamp` | 上传印章 PNG，返回 stamp_id |
+| GET | `/stamps/list` | 获取预置印章列表 |
+| POST | `/detect` | 自动识别盖章位置（甲方/乙方） |
+| POST | `/stamp` | 执行盖章处理（异步），返回 task_id |
+| GET | `/result/{task_id}` | 查询处理状态和进度 |
+| GET | `/download/{task_id}` | 下载处理结果 PDF |
+| POST | `/login` | 用户登录 |
+| GET | `/me` | 获取当前用户信息 |
 
-### Typical Workflow
-
-```
-Upload contract → Upload/select stamp → Detect position → Execute stamping → Poll status → Download result
-```
-
-### Quick Example (cURL)
+### 快速示例
 
 ```bash
-API="https://your-deployment-url.com"
+API="https://stamp.zeooo.cc"
 KEY="YOUR_API_KEY"
-AUTH="Authorization: Bearer $KEY"
 
-# 1. Upload contract
-UPLOAD=$(curl -s -X POST "$API/api/v1/upload" -H "$AUTH" -F "file=@contract.docx")
-FILE_ID=$(echo $UPLOAD | jq -r '.file_id')
+# 上传 → 检测 → 盖章 → 下载
+FILE_ID=$(curl -s -X POST "$API/api/v1/upload" \
+  -H "Authorization: Bearer $KEY" \
+  -F "file=@contract.docx" | jq -r '.file_id')
 
-# 2. Upload seal image
-STAMP_UPLOAD=$(curl -s -X POST "$API/api/v1/upload/stamp" -H "$AUTH" -F "file=@seal.png")
-STAMP_ID=$(echo $STAMP_UPLOAD | jq -r '.stamp_id')
+STAMP_ID=$(curl -s -X POST "$API/api/v1/upload/stamp" \
+  -H "Authorization: Bearer $KEY" \
+  -F "file=@seal.png" | jq -r '.stamp_id')
 
-# 3. Auto-detect seal position
 DETECT=$(curl -s -X POST "$API/api/v1/detect" \
-  -H "$AUTH" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $KEY" \
+  -H "Content-Type: application/json" \
   -d "{\"file_id\": \"$FILE_ID\", \"party\": \"乙方\"}")
 
-PAGE=$(echo $DETECT | jq '.positions[0].page')
-X=$(echo $DETECT | jq '.positions[0].x')
-Y=$(echo $DETECT | jq '.positions[0].y')
-
-# 4. Execute stamping
 TASK_ID=$(curl -s -X POST "$API/api/v1/stamp" \
-  -H "$AUTH" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $KEY" \
+  -H "Content-Type: application/json" \
   -d "{
     \"file_id\": \"$FILE_ID\",
     \"stamp_id\": \"$STAMP_ID\",
-    \"party_b_position\": {\"page\": $PAGE, \"x\": $X, \"y\": $Y},
+    \"party_b_position\": $(echo $DETECT | jq '.positions[0]'),
     \"riding_seam\": true,
     \"scan_effect\": 50,
     \"original_filename\": \"contract.docx\"
   }" | jq -r '.task_id')
 
-# 5. Poll until completed
-while true; do
-  STATUS=$(curl -s "$API/api/v1/result/$TASK_ID" -H "$AUTH")
-  S=$(echo $STATUS | jq -r '.status')
-  echo "Status: $S ($(echo $STATUS | jq '.progress')%)"
-  [ "$S" = "completed" ] && break
-  [ "$S" = "error" ] && { echo "Error: $(echo $STATUS | jq -r '.error')"; exit 1; }
+# 轮询等待完成
+while [ "$(curl -s "$API/api/v1/result/$TASK_ID" \
+  -H "Authorization: Bearer $KEY" | jq -r '.status')" != "completed" ]; do
   sleep 1
 done
 
-# 6. Download result
-curl -o stamped_contract.pdf "$API/api/v1/download/$TASK_ID" -H "$AUTH"
-echo "Downloaded: stamped_contract.pdf"
+curl -o stamped.pdf "$API/api/v1/download/$TASK_ID" \
+  -H "Authorization: Bearer $KEY"
 ```
-
-## Scan Effect Quality
-
-The `scan_effect` parameter (0–100) controls simulated scan quality:
-
-| Range | Label | Description |
-|-------|-------|-------------|
-| **0** | Off | No scan effect applied |
-| **80–100** | Light | High quality: minimal noise, slight tilt (0–0.8°), DPI 200 |
-| **40–79** | Medium | Balanced: visible noise, moderate tilt (0.8–1.5°), DPI 150–200 |
-| **1–39** | Heavy | Low quality: heavy noise, strong tilt (1.5–2.5°), dark corners, DPI 120–150 |
-
-The 7-layer scan effect pipeline includes:
-
-1. **Brightness shift** — Simulates scanner light source
-2. **Non-uniform brightness** — Sensor characteristics with horizontal banding
-3. **Text softening** — Optical capture simulation
-4. **Luminance-weighted noise** — Sensor noise modeling
-5. **Random tilt** — Page misalignment effect
-6. **Edge shadow** — Page lift effect along edges
-7. **Four-corner darkening** — Vignetting effect
-
-## Testing
-
-```bash
-# Run all tests
-pytest tests/
-
-# Run with verbose output
-pytest tests/ -v
-
-# Run a specific test file
-pytest tests/test_detect.py -v
-
-# Run with coverage
-pytest tests/ --cov=app
-```
-
-## Authentication
-
-The application supports two authentication methods:
-
-1. **Session Token** — Obtained via the `/login` endpoint. Tokens are stored in-memory with a 24-hour TTL. Used by the web interface.
-2. **API Key** — Configured via the `API_KEY` environment variable. Passed as a Bearer token in the `Authorization` header. Used for programmatic API access.
-
-### User Roles
-
-| Role | Permissions |
-|------|------------|
-| `admin` | Full access: stamp contracts, manage users, manage stamps |
-| `user` | Standard access: stamp contracts, view history |
-
-Admin users can manage other users and stamps through the admin dashboard at `/admin`.
-
-## Storage
-
-The application uses file-based storage (no database required):
-
-- **Temporary storage** (`UPLOAD_DIR`): Uploaded files, stamps, previews, and results. Auto-cleaned after `FILE_TTL_SECONDS` (default: 1 hour).
-- **Persistent storage** (`DATA_DIR`): User accounts (`users.json`), stamp metadata (`stamps_meta.json`), and preset stamp images.
 
 ## License
 
