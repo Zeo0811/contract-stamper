@@ -34,19 +34,27 @@ def slice_stamp(stamp_path: str, num_pages: int, stamp_aging: int = 30) -> list[
     return strips
 
 
-def place_seam_stamps(pdf_path: str, stamp_path: str, stamp_aging: int = 30) -> str:
+def place_seam_stamps(pdf_path: str, stamp_path: str, stamp_aging: int = 30,
+                      position: str = "random") -> str:
     doc = fitz.open(pdf_path)
     num_pages = len(doc)
     strips = slice_stamp(stamp_path, num_pages, stamp_aging)
-    # Get the actual downscaled stamp height from the first strip (before rotation padding)
-    # Target: stamp displays at 120pt (≈42mm) high in PDF
-    target_h = 120.0
-    # Pick a random vertical center for the whole seam stamp set,
-    # anywhere in the middle 60% of the page (not too close to edges)
+    target_h = 120.0  # stamp height in points (≈42mm)
+
     first_page = doc[0]
-    page_h_ref = first_page.rect.height
-    margin = page_h_ref * 0.20  # keep 20% margin top & bottom
-    seam_center_y = random.uniform(margin + target_h / 2, page_h_ref - margin - target_h / 2)
+    page_h = first_page.rect.height
+    margin = page_h * 0.12  # 12% margin top & bottom
+    usable_top = margin + target_h / 2
+    usable_bottom = page_h - margin - target_h / 2
+
+    if position == "top":
+        seam_center_y = usable_top + (usable_bottom - usable_top) * random.uniform(0.05, 0.25)
+    elif position == "center":
+        seam_center_y = page_h / 2 + random.uniform(-20, 20)
+    elif position == "bottom":
+        seam_center_y = usable_top + (usable_bottom - usable_top) * random.uniform(0.75, 0.95)
+    else:  # random
+        seam_center_y = random.uniform(usable_top, usable_bottom)
 
     for i in range(num_pages):
         page = doc[i]

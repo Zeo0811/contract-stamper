@@ -30,6 +30,7 @@
     const stampSize = document.getElementById('stampSize');
     const stampSizeVal = document.getElementById('stampSizeVal');
     const seamToggle = document.getElementById('seamToggle');
+    const seamPosition = document.getElementById('seamPosition');
     const agingSlider = document.getElementById('agingSlider');
     const agingVal = document.getElementById('agingVal');
     const scanSlider = document.getElementById('scanSlider');
@@ -491,6 +492,11 @@
     }
 
     // ── Settings ──
+    const seamPositionRow = document.getElementById('seamPositionRow');
+    seamToggle.addEventListener('change', () => {
+        seamPositionRow.style.display = seamToggle.checked ? '' : 'none';
+    });
+
     stampSize.addEventListener('input', () => {
         stampSizeVal.textContent = stampSize.value + 'mm';
     });
@@ -555,6 +561,7 @@
             stamp_id: stampId,
             party_b_position: { page: pos.page, x: pdfX, y: pdfY },
             riding_seam: seamToggle.checked,
+            seam_position: seamPosition.value,
             scan_effect: scanSliderToApi(parseInt(scanSlider.value)),
             stamp_aging: parseInt(agingSlider.value),
             original_filename: lastFileName,
