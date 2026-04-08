@@ -363,7 +363,6 @@
     async function detectKeywords() {
         const resp = await api('POST', '/api/v1/detect', { file_id: fileId, party: currentParty });
         const data = await resp.json();
-        console.log('[detect] API response:', JSON.stringify(data.positions?.[0]));
         if (data.found && data.positions.length > 0) {
             const pos = data.positions[0];
             // Store normalized 0-1 coords directly; convert at point of use
@@ -373,7 +372,6 @@
                 x_norm: pos.x_norm,
                 y_norm: pos.y_norm,
             };
-            console.log('[detect] detectedPosition:', JSON.stringify(detectedPosition));
 
             showMarkerByNorm(detectedPosition.page, detectedPosition.x_norm, detectedPosition.y_norm);
             showStatus('success', `已识别: "${detectedPosition.keyword}" 在第 ${detectedPosition.page + 1} 页`);
@@ -418,14 +416,9 @@
         // Normalized → CSS pixels on page
         const cx = xNorm * rect.width;
         const cy = yNorm * rect.height;
-        const left = rect.left - scrollRect.left + previewScroll.scrollLeft + cx - 40;
-        const top = rect.top - scrollRect.top + previewScroll.scrollTop + cy - 40;
-        console.log('[marker] xNorm:', xNorm, 'yNorm:', yNorm);
-        console.log('[marker] canvas:', canvas.width, 'x', canvas.height, 'rect:', rect.width, 'x', rect.height);
-        console.log('[marker] cx:', cx, 'cy:', cy, '→ left:', left, 'top:', top);
         stampMarker.hidden = false;
-        stampMarker.style.left = left + 'px';
-        stampMarker.style.top = top + 'px';
+        stampMarker.style.left = (rect.left - scrollRect.left + previewScroll.scrollLeft + cx - 40) + 'px';
+        stampMarker.style.top = (rect.top - scrollRect.top + previewScroll.scrollTop + cy - 40) + 'px';
     }
 
     // ── Draggable stamp marker ──
