@@ -29,8 +29,6 @@ def _generate_keywords(party: str) -> list[str]:
     keywords = []
     for s in suffixes:
         keywords.append(party + s)
-    # Also add standalone party name as lowest-priority fallback
-    keywords.append(party)
     return keywords
 
 
