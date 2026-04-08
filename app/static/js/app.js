@@ -30,6 +30,8 @@
     const stampSize = document.getElementById('stampSize');
     const stampSizeVal = document.getElementById('stampSizeVal');
     const seamToggle = document.getElementById('seamToggle');
+    const agingSlider = document.getElementById('agingSlider');
+    const agingVal = document.getElementById('agingVal');
     const scanSlider = document.getElementById('scanSlider');
     const scanVal = document.getElementById('scanVal');
 
@@ -493,6 +495,14 @@
         stampSizeVal.textContent = stampSize.value + 'mm';
     });
 
+    agingSlider.addEventListener('input', () => {
+        const v = parseInt(agingSlider.value);
+        if (v === 0) agingVal.textContent = '关闭';
+        else if (v <= 25) agingVal.textContent = '轻度';
+        else if (v <= 55) agingVal.textContent = '中度';
+        else agingVal.textContent = '重度';
+    });
+
     scanSlider.addEventListener('input', () => {
         const v = parseInt(scanSlider.value);
         if (v === 0) scanVal.textContent = '关闭';
@@ -546,6 +556,7 @@
             party_b_position: { page: pos.page, x: pdfX, y: pdfY },
             riding_seam: seamToggle.checked,
             scan_effect: scanSliderToApi(parseInt(scanSlider.value)),
+            stamp_aging: parseInt(agingSlider.value),
             original_filename: lastFileName,
         };
 
