@@ -313,11 +313,27 @@
             return;
         }
         stampGrid.innerHTML = data.stamps.map(s => `
-            <div class="stamp-card" data-url="${s.url}" data-name="${s.name}">
+            <div class="stamp-card" data-url="${s.url}" data-name="${s.name}" data-stamp-id="">
                 <img src="${s.url}" alt="${s.company || s.name}">
                 <div class="stamp-card-name">${s.company || s.name}</div>
             </div>
         `).join('');
+
+        // Pre-upload all stamps in background so selection is instant
+        stampGrid.querySelectorAll('.stamp-card').forEach(async card => {
+            try {
+                const imgResp = await fetch(card.dataset.url);
+                if (!imgResp.ok) return;
+                const blob = await imgResp.blob();
+                const fd = new FormData();
+                fd.append('file', blob, card.dataset.name + '.png');
+                const uploadResp = await api('POST', '/api/v1/upload/stamp', fd, true);
+                if (uploadResp.ok) {
+                    const d = await uploadResp.json();
+                    card.dataset.stampId = d.stamp_id;
+                }
+            } catch (e) { /* ignore preload failures */ }
+        });
 
         stampGrid.addEventListener('click', async e => {
             const card = e.target.closest('.stamp-card');
@@ -326,23 +342,32 @@
             stampGrid.querySelectorAll('.stamp-card').forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
 
-            showStatus('loading', '加载印章中...');
-            try {
-                const imgResp = await fetch(card.dataset.url);
-                if (!imgResp.ok) { showStatus('error', '印章图片加载失败'); return; }
-                const blob = await imgResp.blob();
-                if (!blob.type.startsWith('image/')) { showStatus('error', '印章文件格式无效'); return; }
-                const fd = new FormData();
-                fd.append('file', blob, card.dataset.name + '.png');
-                const uploadResp = await api('POST', '/api/v1/upload/stamp', fd, true);
-                if (!uploadResp.ok) { showStatus('error', '印章加载失败'); return; }
-                const uploadData = await uploadResp.json();
-                stampId = uploadData.stamp_id;
+            if (card.dataset.stampId) {
+                // Already preloaded — instant
+                stampId = card.dataset.stampId;
                 showStatus('success', `已选择: ${card.dataset.name}`);
                 hideStatus();
                 checkReady();
-            } catch (err) {
-                showStatus('error', '印章加载出错');
+            } else {
+                // Fallback: preload hasn't finished yet
+                showStatus('loading', '加载印章中...');
+                try {
+                    const imgResp = await fetch(card.dataset.url);
+                    if (!imgResp.ok) { showStatus('error', '印章图片加载失败'); return; }
+                    const blob = await imgResp.blob();
+                    const fd = new FormData();
+                    fd.append('file', blob, card.dataset.name + '.png');
+                    const uploadResp = await api('POST', '/api/v1/upload/stamp', fd, true);
+                    if (!uploadResp.ok) { showStatus('error', '印章加载失败'); return; }
+                    const uploadData = await uploadResp.json();
+                    stampId = uploadData.stamp_id;
+                    card.dataset.stampId = stampId;
+                    showStatus('success', `已选择: ${card.dataset.name}`);
+                    hideStatus();
+                    checkReady();
+                } catch (err) {
+                    showStatus('error', '印章加载出错');
+                }
             }
         });
     }
