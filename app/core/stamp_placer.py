@@ -4,16 +4,46 @@ import tempfile
 import fitz
 from PIL import Image
 
+def _generate_keywords(party: str) -> list[str]:
+    """Generate keyword variations covering different bracket/punctuation styles."""
+    # Common seal-related suffixes
+    suffixes = [
+        "（盖章）", "(盖章)", "（盖章)", "(盖章）",
+        "签章", "盖章",
+        "（签字/盖章）", "(签字/盖章)", "（签字/盖章)", "(签字/盖章）",
+        "（签字盖章）", "(签字盖章)", "（签字盖章)", "(签字盖章）",
+        "（签章）", "(签章)", "（签章)", "(签章）",
+        "（签字或盖章）", "(签字或盖章)",
+        "（公章）", "(公章)", "（公章)", "(公章）",
+        " （盖章）", " (盖章)", "（ 盖章 ）", "( 盖章 )",
+        "（签字 / 盖章）", "(签字 / 盖章)",
+    ]
+    keywords = []
+    for s in suffixes:
+        keywords.append(party + s)
+    # Also add standalone party name as lowest-priority fallback
+    keywords.append(party)
+    return keywords
+
+
 KEYWORDS_BY_PARTY = {
-    "乙方": [
-        "乙方（盖章）", "乙方签章", "乙方（签字/盖章）",
-        "乙方（签字盖章）", "乙方(盖章)", "乙方(签字/盖章)",
-    ],
-    "甲方": [
-        "甲方（盖章）", "甲方签章", "甲方（签字/盖章）",
-        "甲方（签字盖章）", "甲方(盖章)", "甲方(签字/盖章)",
-    ],
+    "乙方": _generate_keywords("乙方"),
+    "甲方": _generate_keywords("甲方"),
 }
+
+
+def _normalize_text(text: str) -> str:
+    """Normalize Unicode punctuation for comparison."""
+    replacements = {
+        "\uff08": "(", "\uff09": ")",  # fullwidth parens
+        "\u3008": "(", "\u3009": ")",  # angle brackets
+        "\uff0f": "/",                 # fullwidth slash
+        "\u3000": " ",                 # ideographic space
+        "\u00a0": " ",                 # non-breaking space
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
 
 
 def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
@@ -22,6 +52,7 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
     results = []
     for page_num in range(len(doc)):
         page = doc[page_num]
+        # First try direct search for each keyword
         for keyword in keywords:
             rects = page.search_for(keyword)
             for rect in rects:
@@ -33,6 +64,26 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
                     "width": round(rect.width),
                     "height": round(rect.height),
                 })
+        # If no results yet, try with normalized text matching
+        if not results:
+            page_text = page.get_text()
+            normalized = _normalize_text(page_text)
+            for keyword in keywords:
+                norm_kw = _normalize_text(keyword)
+                if norm_kw in normalized:
+                    # Found in normalized text, search with normalized keyword
+                    rects = page.search_for(norm_kw)
+                    if not rects:
+                        rects = page.search_for(keyword)
+                    for rect in rects:
+                        results.append({
+                            "keyword": keyword,
+                            "page": page_num,
+                            "x": round(rect.x0),
+                            "y": round(rect.y0),
+                            "width": round(rect.width),
+                            "height": round(rect.height),
+                        })
     doc.close()
     return results
 

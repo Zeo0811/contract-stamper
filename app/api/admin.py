@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import uuid
 from datetime import date
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from app.auth import require_admin, list_users, create_user, delete_user
@@ -91,15 +92,9 @@ async def admin_upload_stamp(
         raise HTTPException(status_code=400, detail="Only PNG/JPG files allowed")
 
     os.makedirs(STAMPS_DIR, exist_ok=True)
-    filename = file.filename
-    # Avoid overwriting
+    ext = os.path.splitext(file.filename or ".png")[1].lower()
+    filename = f"{uuid.uuid4().hex[:12]}{ext}"
     dest = os.path.join(STAMPS_DIR, filename)
-    counter = 1
-    while os.path.exists(dest):
-        name, ext = os.path.splitext(filename)
-        filename = f"{name}_{counter}{ext}"
-        dest = os.path.join(STAMPS_DIR, filename)
-        counter += 1
 
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)

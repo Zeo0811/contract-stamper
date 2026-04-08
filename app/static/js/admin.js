@@ -86,6 +86,14 @@
         if (e.target.files.length) {
             selectedStampFile = e.target.files[0];
             document.getElementById('stampFileName').textContent = selectedStampFile.name;
+            // Show image preview
+            const preview = document.getElementById('stampPreview');
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                preview.src = ev.target.result;
+                preview.hidden = false;
+            };
+            reader.readAsDataURL(selectedStampFile);
         }
     });
 
@@ -119,6 +127,11 @@
         if (!company) { alert('请填写公司主体名称'); return; }
         if (!selectedStampFile) { alert('请选择印章图片'); return; }
 
+        const addBtn = document.getElementById('addStampBtn');
+        const origHTML = addBtn.innerHTML;
+        addBtn.disabled = true;
+        addBtn.innerHTML = '<svg class="spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>上传中...';
+
         const fd = new FormData();
         fd.append('file', selectedStampFile);
         fd.append('company', company);
@@ -126,20 +139,28 @@
         const uploadHeaders = {};
         if (token) uploadHeaders['Authorization'] = 'Bearer ' + token;
 
-        const resp = await fetch('/api/v1/admin/stamps', {
-            method: 'POST',
-            headers: uploadHeaders,
-            body: fd,
-        });
-        if (resp.ok) {
-            document.getElementById('newCompany').value = '';
-            document.getElementById('stampFileName').textContent = '未选择文件';
-            document.getElementById('stampFileInput').value = '';
-            selectedStampFile = null;
-            loadStamps();
-        } else {
-            const err = await resp.json();
-            alert(err.detail || '添加失败');
+        try {
+            const resp = await fetch('/api/v1/admin/stamps', {
+                method: 'POST',
+                headers: uploadHeaders,
+                body: fd,
+            });
+            if (resp.ok) {
+                document.getElementById('newCompany').value = '';
+                document.getElementById('stampFileName').textContent = '未选择文件';
+                document.getElementById('stampFileInput').value = '';
+                selectedStampFile = null;
+                const preview = document.getElementById('stampPreview');
+                preview.hidden = true;
+                preview.src = '';
+                loadStamps();
+            } else {
+                const err = await resp.json();
+                alert(err.detail || '添加失败');
+            }
+        } finally {
+            addBtn.disabled = false;
+            addBtn.innerHTML = origHTML;
         }
     });
 
