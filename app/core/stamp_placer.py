@@ -114,20 +114,19 @@ STAMP_OFFSET_Y = 60  # points below keyword text bottom to stamp center (~21mm)
 
 def _make_result(keyword, page_num, rect_x0, rect_y0, rect_w, rect_h,
                   page_w, page_h, ocr=False):
-    """Build a detection result with normalized 0-1 coordinates.
-
-    Returns the stamp-center position as fractions of page dimensions,
-    offset below the keyword text.  This avoids all coordinate-system
-    mismatches between backend (PDF points) and frontend (canvas pixels).
-    """
+    """Build a detection result with both absolute and normalized coordinates."""
     # Stamp center in PDF points
     cx = rect_x0 + rect_w / 2
     cy = rect_y0 + rect_h + STAMP_OFFSET_Y
     return {
         "keyword": keyword,
         "page": page_num,
-        "x_norm": cx / page_w,   # 0.0 – 1.0, fraction of page width
-        "y_norm": cy / page_h,   # 0.0 – 1.0, fraction of page height
+        "x": round(cx),            # PDF points (backward compat)
+        "y": round(cy),            # PDF points (backward compat)
+        "x_norm": cx / page_w,     # 0.0 – 1.0, fraction of page width
+        "y_norm": cy / page_h,     # 0.0 – 1.0, fraction of page height
+        "width": round(rect_w),
+        "height": round(rect_h),
         **({"ocr": True} if ocr else {}),
     }
 
