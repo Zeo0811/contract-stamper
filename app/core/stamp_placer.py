@@ -112,16 +112,22 @@ def _search_ocr_words(ocr_words: list[dict], keyword: str) -> list[dict]:
 STAMP_OFFSET_Y = 60  # points below keyword text bottom to stamp center (~21mm)
 
 
-def _make_result(keyword, page_num, rect_x0, rect_y0, rect_w, rect_h, ocr=False):
-    """Build a detection result with stamp-center coordinates offset below the keyword."""
+def _make_result(keyword, page_num, rect_x0, rect_y0, rect_w, rect_h,
+                  page_w, page_h, ocr=False):
+    """Build a detection result with normalized 0-1 coordinates.
+
+    Returns the stamp-center position as fractions of page dimensions,
+    offset below the keyword text.  This avoids all coordinate-system
+    mismatches between backend (PDF points) and frontend (canvas pixels).
+    """
+    # Stamp center in PDF points
+    cx = rect_x0 + rect_w / 2
+    cy = rect_y0 + rect_h + STAMP_OFFSET_Y
     return {
         "keyword": keyword,
         "page": page_num,
-        # Stamp center: horizontally centered on keyword, vertically below it
-        "x": round(rect_x0 + rect_w / 2),
-        "y": round(rect_y0 + rect_h + STAMP_OFFSET_Y),
-        "width": round(rect_w),
-        "height": round(rect_h),
+        "x_norm": cx / page_w,   # 0.0 – 1.0, fraction of page width
+        "y_norm": cy / page_h,   # 0.0 – 1.0, fraction of page height
         **({"ocr": True} if ocr else {}),
     }
 
@@ -130,16 +136,17 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
     """Detect seal-placement keywords in PDF.
 
     Scans from the LAST page backward because contracts typically
-    have the signature/seal block at the end.  Returns stamp-center
-    coordinates offset below the keyword text.
+    have the signature/seal block at the end.  Returns normalized
+    (0-1) stamp-center coordinates offset below the keyword text.
     """
     keywords = KEYWORDS_BY_PARTY.get(party, KEYWORDS_BY_PARTY["乙方"])
     doc = fitz.open(pdf_path)
     results = []
 
-    # Scan from last page backward — seal block is usually at the end
     for page_num in reversed(range(len(doc))):
         page = doc[page_num]
+        page_w = page.rect.width
+        page_h = page.rect.height
         page_results = []
 
         # ── Pass 1: direct PyMuPDF text search ──
@@ -149,6 +156,7 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
                 page_results.append(_make_result(
                     keyword, page_num,
                     rect.x0, rect.y0, rect.width, rect.height,
+                    page_w, page_h,
                 ))
 
         # ── Pass 2: normalized text fallback ──
@@ -165,6 +173,7 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
                         page_results.append(_make_result(
                             keyword, page_num,
                             rect.x0, rect.y0, rect.width, rect.height,
+                            page_w, page_h,
                         ))
 
         # ── Pass 3: OCR fallback for scanned pages ──
@@ -179,16 +188,15 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
                             keyword, page_num,
                             box["x0"], box["y0"],
                             box["x1"] - box["x0"], box["y1"] - box["y0"],
-                            ocr=True,
+                            page_w, page_h, ocr=True,
                         ))
                     if page_results:
                         break
 
         if page_results:
-            # Sort by y descending — prefer the lowest match on the page
-            page_results.sort(key=lambda r: r["y"], reverse=True)
+            page_results.sort(key=lambda r: r["y_norm"], reverse=True)
             results = page_results
-            break  # found on this page, no need to check earlier pages
+            break
 
     doc.close()
     return results
