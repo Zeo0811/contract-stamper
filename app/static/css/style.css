@@ -55,6 +55,17 @@
 /* ── Reset ── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* ── Focus visible for keyboard navigation ── */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible) {
+    outline: none;
+}
+
 body {
     font-family: var(--font);
     background: var(--bg);
@@ -176,7 +187,7 @@ body {
 }
 
 .admin-header-badge {
-    font-size: 11px; background: rgba(255,255,255,.18);
+    font-size: 11px; background: rgba(255,255,255,.25);
     padding: 3px 10px; border-radius: 10px; font-weight: 600;
 }
 
@@ -414,19 +425,29 @@ body {
     box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
+.stamp-card.preloaded::after {
+    content: '';
+    display: block;
+    width: 6px; height: 6px;
+    background: var(--g400);
+    border-radius: 50%;
+    margin: 2px auto 0;
+}
+
 .stamp-card img {
     width: 52px; height: 52px;
     object-fit: contain;
 }
 
 .stamp-card-name {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-2);
     margin-top: 4px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: 500;
+    max-width: 100%;
 }
 
 /* ── Settings ── */
@@ -458,7 +479,14 @@ body {
     max-width: 80px;
     padding: 4px 6px;
     font-size: 13px;
+    border-radius: var(--r-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease);
 }
+.setting-select:hover { border-color: var(--primary-bd); }
 
 /* Custom range slider */
 .slider {
@@ -594,9 +622,10 @@ body {
 }
 
 .btn-primary:disabled {
-    opacity: .45;
+    opacity: .5;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
 }
 
 .btn-process {
@@ -711,7 +740,10 @@ body {
     font-size: 13px;
     font-weight: 500;
     font-family: var(--font);
-    animation: fadeIn .25s var(--ease-out);
+    animation: fadeUp .3s var(--ease-out);
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .status-bar.loading { background: var(--info-lt); color: var(--info); }
@@ -724,9 +756,9 @@ body {
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
-    background: #fef2f2;
-    border-bottom: 2px solid #ef4444;
-    color: #b91c1c;
+    background: var(--danger-lt);
+    border-bottom: 2px solid var(--danger);
+    color: var(--danger);
     font-size: 13px;
     font-weight: 600;
     animation: fadeIn .3s var(--ease-out);

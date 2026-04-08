@@ -331,6 +331,7 @@
                 if (uploadResp.ok) {
                     const d = await uploadResp.json();
                     card.dataset.stampId = d.stamp_id;
+                    card.classList.add('preloaded');
                 }
             } catch (e) { /* ignore preload failures */ }
         });
