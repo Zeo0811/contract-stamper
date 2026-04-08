@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import fitz
 from PIL import Image
+from app.core.stamp_placer import _age_stamp
 
 
 MAX_STAMP_PX = 500  # Max stamp dimension before slicing
@@ -16,6 +17,8 @@ def slice_stamp(stamp_path: str, num_pages: int) -> list[str]:
     if max(w, h) > MAX_STAMP_PX:
         scale = MAX_STAMP_PX / max(w, h)
         img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+    # Apply aging to the whole stamp before slicing (consistent look)
+    img = _age_stamp(img)
     width, height = img.size
     strip_width = width // num_pages
     strips = []

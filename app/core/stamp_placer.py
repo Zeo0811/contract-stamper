@@ -1,8 +1,10 @@
 import io
 import os
+import random
 import tempfile
 import fitz
-from PIL import Image
+import numpy as np
+from PIL import Image, ImageFilter, ImageEnhance
 
 try:
     import pytesseract
@@ -110,18 +112,28 @@ def _search_ocr_words(ocr_words: list[dict], keyword: str) -> list[dict]:
 
 
 def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
+    """Detect seal-placement keywords in PDF.
+
+    Scans from the LAST page backward because contracts typically
+    have the signature/seal block at the end.  Stops as soon as
+    matches are found on a page, returning them sorted with the
+    lowest position on the page (highest y) first — that is the
+    most likely seal target.
+    """
     keywords = KEYWORDS_BY_PARTY.get(party, KEYWORDS_BY_PARTY["乙方"])
     doc = fitz.open(pdf_path)
     results = []
 
-    for page_num in range(len(doc)):
+    # Scan from last page backward — seal block is usually at the end
+    for page_num in reversed(range(len(doc))):
         page = doc[page_num]
+        page_results = []
 
         # ── Pass 1: direct PyMuPDF text search ──
         for keyword in keywords:
             rects = page.search_for(keyword)
             for rect in rects:
-                results.append({
+                page_results.append({
                     "keyword": keyword,
                     "page": page_num,
                     "x": round(rect.x0),
@@ -131,7 +143,7 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
                 })
 
         # ── Pass 2: normalized text fallback ──
-        if not results:
+        if not page_results:
             page_text = page.get_text()
             normalized = _normalize_text(page_text)
             for keyword in keywords:
@@ -141,7 +153,7 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
                     if not rects:
                         rects = page.search_for(keyword)
                     for rect in rects:
-                        results.append({
+                        page_results.append({
                             "keyword": keyword,
                             "page": page_num,
                             "x": round(rect.x0),
@@ -151,15 +163,14 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
                         })
 
         # ── Pass 3: OCR fallback for scanned pages ──
-        if not results:
+        if not page_results:
             page_text = page.get_text().strip()
-            # If the page has very little text, it's likely a scanned image
             if len(page_text) < 50 and HAS_TESSERACT:
                 ocr_words = _ocr_page(page)
                 for keyword in keywords:
                     boxes = _search_ocr_words(ocr_words, keyword)
                     for box in boxes:
-                        results.append({
+                        page_results.append({
                             "keyword": keyword,
                             "page": page_num,
                             "x": round(box["x0"]),
@@ -168,23 +179,87 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
                             "height": round(box["y1"] - box["y0"]),
                             "ocr": True,
                         })
-                    if results:
-                        break  # found match, stop searching more keywords
+                    if page_results:
+                        break
+
+        if page_results:
+            # Sort by y descending — prefer the lowest match on the page
+            page_results.sort(key=lambda r: r["y"], reverse=True)
+            results = page_results
+            break  # found on this page, no need to check earlier pages
 
     doc.close()
     return results
 
 
-MAX_STAMP_PX = 500  # Max stamp image dimension in pixels
+MAX_STAMP_PX = 500  # Max stamp dimension in pixels
 
 
-def _downscale_stamp(stamp_path: str) -> bytes:
-    """Downscale stamp image to reasonable size and return PNG bytes."""
+def _age_stamp(img: Image.Image) -> Image.Image:
+    """Make a stamp image look like a real physical seal impression.
+
+    Simulates: ink fade, uneven pressure, slight blur, noise, micro-rotation.
+    Input must be RGBA.
+    """
+    w, h = img.size
+
+    # ── 1. Desaturate: real stamp ink is never perfectly vivid ──
+    rgb = img.convert("RGB")
+    enhancer = ImageEnhance.Color(rgb)
+    rgb = enhancer.enhance(random.uniform(0.55, 0.75))  # 55-75% saturation
+
+    # ── 2. Slight brightness reduction (ink is slightly darker than digital) ──
+    enhancer = ImageEnhance.Brightness(rgb)
+    rgb = enhancer.enhance(random.uniform(0.88, 0.95))
+
+    # Merge back with original alpha
+    img = Image.merge("RGBA", (*rgb.split(), img.split()[3]))
+
+    # ── 3. Uneven ink distribution (pressure map) ──
+    # Create a smooth random mask simulating uneven stamp pressure
+    arr = np.array(img, dtype=np.float32)
+    alpha = arr[:, :, 3]
+    # Generate low-frequency pressure variation
+    small_h, small_w = max(4, h // 40), max(4, w // 40)
+    pressure = np.random.uniform(0.65, 1.0, (small_h, small_w)).astype(np.float32)
+    pressure_img = Image.fromarray((pressure * 255).astype(np.uint8), mode="L")
+    pressure_map = np.array(
+        pressure_img.resize((w, h), Image.BILINEAR), dtype=np.float32
+    ) / 255.0
+    # Apply pressure to alpha channel (transparent where pressure is low)
+    alpha = alpha * pressure_map
+    arr[:, :, 3] = alpha
+    img = Image.fromarray(arr.astype(np.uint8), "RGBA")
+
+    # ── 4. Slight Gaussian blur (ink spread on paper) ──
+    blur_r = random.uniform(0.4, 0.8)
+    img = img.filter(ImageFilter.GaussianBlur(radius=blur_r))
+
+    # ── 5. Fine noise on the stamp pixels ──
+    arr = np.array(img, dtype=np.float32)
+    mask = arr[:, :, 3] > 20  # only add noise where stamp has content
+    noise = np.random.normal(0, 4, (h, w, 3))
+    for c in range(3):
+        channel = arr[:, :, c]
+        channel[mask] = np.clip(channel[mask] + noise[:, :, c][mask], 0, 255)
+        arr[:, :, c] = channel
+    img = Image.fromarray(arr.astype(np.uint8), "RGBA")
+
+    # ── 6. Micro-rotation (hand shake) ──
+    angle = random.uniform(-2.0, 2.0)
+    img = img.rotate(angle, expand=True, fillcolor=(0, 0, 0, 0))
+
+    return img
+
+
+def _prepare_stamp(stamp_path: str) -> bytes:
+    """Load, downscale, age, and return stamp as PNG bytes."""
     img = Image.open(stamp_path).convert("RGBA")
     w, h = img.size
     if max(w, h) > MAX_STAMP_PX:
         scale = MAX_STAMP_PX / max(w, h)
         img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+    img = _age_stamp(img)
     buf = io.BytesIO()
     img.save(buf, "PNG")
     return buf.getvalue()
@@ -196,7 +271,7 @@ def place_stamp(pdf_path: str, stamp_path: str, page_num: int, x: float, y: floa
     size_pt = size_mm * 2.835
     half = size_pt / 2
     stamp_rect = fitz.Rect(x - half, y - half, x + half, y + half)
-    stamp_bytes = _downscale_stamp(stamp_path)
+    stamp_bytes = _prepare_stamp(stamp_path)
     page.insert_image(stamp_rect, stream=stamp_bytes, overlay=True)
     fd, output_path = tempfile.mkstemp(suffix=".pdf")
     os.close(fd)
