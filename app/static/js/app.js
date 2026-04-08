@@ -329,22 +329,25 @@
             </div>
         `).join('');
 
-        // Pre-upload all stamps in background so selection is instant
-        stampGrid.querySelectorAll('.stamp-card').forEach(async card => {
-            try {
-                const imgResp = await fetch(card.dataset.url);
-                if (!imgResp.ok) return;
-                const blob = await imgResp.blob();
-                const fd = new FormData();
-                fd.append('file', blob, card.dataset.name + '.png');
-                const uploadResp = await api('POST', '/api/v1/upload/stamp', fd, true);
-                if (uploadResp.ok) {
-                    const d = await uploadResp.json();
-                    card.dataset.stampId = d.stamp_id;
-                    card.classList.add('preloaded');
-                }
-            } catch (e) { /* ignore preload failures */ }
-        });
+        // Pre-upload stamps one by one in background (sequential to avoid overloading server)
+        (async () => {
+            const cards = stampGrid.querySelectorAll('.stamp-card');
+            for (const card of cards) {
+                try {
+                    const imgResp = await fetch(card.dataset.url);
+                    if (!imgResp.ok) continue;
+                    const blob = await imgResp.blob();
+                    const fd = new FormData();
+                    fd.append('file', blob, card.dataset.name + '.png');
+                    const uploadResp = await api('POST', '/api/v1/upload/stamp', fd, true);
+                    if (uploadResp.ok) {
+                        const d = await uploadResp.json();
+                        card.dataset.stampId = d.stamp_id;
+                        card.classList.add('preloaded');
+                    }
+                } catch (e) { /* ignore preload failures */ }
+            }
+        })();
 
         stampGrid.addEventListener('click', async e => {
             const card = e.target.closest('.stamp-card');
