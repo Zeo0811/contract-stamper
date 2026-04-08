@@ -221,6 +221,8 @@ def _age_stamp(img: Image.Image, intensity: int = 30) -> Image.Image:
     """Make a stamp look like a real physical seal impression.
 
     intensity: 0 (no effect) to 100 (heavy aging).  Default 30 = subtle.
+    The red color is preserved even at high intensity — fading is achieved
+    mainly through transparency rather than desaturation.
     Input must be RGBA.
     """
     if intensity <= 0:
@@ -229,54 +231,53 @@ def _age_stamp(img: Image.Image, intensity: int = 30) -> Image.Image:
     t = max(0.0, min(1.0, intensity / 100.0))  # 0.0 – 1.0
     w, h = img.size
 
-    # ── 1. Desaturation ──
+    # ── 1. Mild desaturation (keep it red!) ──
     rgb = img.convert("RGB")
-    # t=0 → 1.0 (no change), t=1 → 0.30
-    sat = 1.0 - t * 0.70
+    # t=0 → 1.0 (no change), t=1 → 0.70 (still clearly colored)
+    sat = 1.0 - t * 0.30
     enhancer = ImageEnhance.Color(rgb)
-    rgb = enhancer.enhance(sat + random.uniform(-0.05, 0.05))
+    rgb = enhancer.enhance(sat + random.uniform(-0.03, 0.03))
 
-    # ── 2. Brightness boost (fade) ──
-    # t=0 → 1.0, t=1 → 1.30
-    brt = 1.0 + t * 0.30
+    # ── 2. Slight brightness boost (gentle fade) ──
+    # t=0 → 1.0, t=1 → 1.12
+    brt = 1.0 + t * 0.12
     enhancer = ImageEnhance.Brightness(rgb)
-    rgb = enhancer.enhance(brt + random.uniform(-0.03, 0.03))
+    rgb = enhancer.enhance(brt + random.uniform(-0.02, 0.02))
 
-    # ── 3. Contrast reduction ──
-    # t=0 → 1.0, t=1 → 0.60
-    con = 1.0 - t * 0.40
+    # ── 3. Mild contrast reduction ──
+    # t=0 → 1.0, t=1 → 0.82
+    con = 1.0 - t * 0.18
     enhancer = ImageEnhance.Contrast(rgb)
-    rgb = enhancer.enhance(con + random.uniform(-0.03, 0.03))
+    rgb = enhancer.enhance(con + random.uniform(-0.02, 0.02))
 
     img = Image.merge("RGBA", (*rgb.split(), img.split()[3]))
 
-    # ── 4. Uneven ink pressure ──
+    # ── 4. Uneven ink pressure (main aging effect via alpha) ──
     arr = np.array(img, dtype=np.float32)
     alpha = arr[:, :, 3]
     small_h, small_w = max(4, h // 30), max(4, w // 30)
-    # t=0 → range [0.95,1], t=1 → range [0.35,1]
-    lo = 1.0 - t * 0.65
+    # t=0 → range [0.95,1], t=1 → range [0.40,1]
+    lo = 1.0 - t * 0.60
     pressure = np.random.uniform(lo, 1.0, (small_h, small_w)).astype(np.float32)
     pressure_img = Image.fromarray((pressure * 255).astype(np.uint8), mode="L")
     pressure_map = np.array(
         pressure_img.resize((w, h), Image.BILINEAR), dtype=np.float32
     ) / 255.0
     alpha = alpha * pressure_map
-    # Overall transparency: t=0 → 1.0, t=1 → 0.55
+    # Overall transparency: t=0 → 1.0, t=1 → 0.55 (this is the main fading)
     alpha = alpha * (1.0 - t * 0.45 + random.uniform(-0.03, 0.03))
     arr[:, :, 3] = np.clip(alpha, 0, 255)
     img = Image.fromarray(arr.astype(np.uint8), "RGBA")
 
     # ── 5. Gaussian blur ──
-    # t=0 → 0.1, t=1 → 1.3
-    blur_r = 0.1 + t * 1.2
+    blur_r = 0.1 + t * 1.0
     img = img.filter(ImageFilter.GaussianBlur(radius=blur_r))
 
     # ── 6. Noise ──
     if t > 0.1:
         arr = np.array(img, dtype=np.float32)
         mask = arr[:, :, 3] > 10
-        sigma = t * 8
+        sigma = t * 6
         noise = np.random.normal(0, sigma, (h, w, 3))
         for c in range(3):
             ch = arr[:, :, c]
