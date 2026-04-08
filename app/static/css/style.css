@@ -706,23 +706,28 @@ body {
 }
 .btn-process svg { width: 16px; height: 16px; }
 
-.action-row {
-    display: flex; gap: 8px; align-items: stretch;
+.action-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
-.action-row .btn-process { flex: 1; }
 
 .btn-reset {
-    width: 44px; min-width: 44px;
+    width: 100%;
+    padding: 10px;
     background: var(--n100);
     border: 1px solid var(--border);
     border-radius: var(--r-md);
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     color: var(--text-2);
-    transition: all var(--dur) var(--ease);
+    font-size: 13px;
+    font-weight: 500;
     font-family: var(--font);
+    transition: all var(--dur) var(--ease);
 }
 
 .btn-reset:hover {
@@ -730,6 +735,7 @@ body {
     color: var(--primary);
     border-color: var(--primary-bd);
 }
+.btn-reset svg { flex-shrink: 0; }
 
 /* ══════════════════════════════════════════
    STATUS BAR
@@ -1136,7 +1142,7 @@ body {
 
     /* Buttons */
     .btn-process { padding: 12px; font-size: 14px; border-radius: var(--r-sm); }
-    .btn-reset { width: 40px; min-width: 40px; }
+    .btn-reset { padding: 8px; font-size: 12px; }
 
     /* File info */
     .file-info { padding: 10px 12px; }
