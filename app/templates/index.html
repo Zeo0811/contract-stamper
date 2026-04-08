@@ -12,7 +12,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/icon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/icon-180x180.png">
     <link rel="manifest" href="/static/manifest.json">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v={{ v }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
@@ -204,7 +204,7 @@
     <canvas id="fireworks" onclick="stopFireworks()"></canvas>
     <div class="fw-hint">点击任意位置关闭</div>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v={{ v }}"></script>
     <script>
     (function() {
         async function loadUserInfo() {

@@ -70,6 +70,9 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
+# Cache-busting: changes every deployment so browsers fetch fresh static files
+DEPLOY_VERSION = str(int(time.time()))
+
 STAMPS_META_FILE = os.path.join(DATA_DIR, "stamps_meta.json")
 DATA_STAMPS_DIR = os.path.join(DATA_DIR, "stamps")
 
@@ -97,6 +100,7 @@ async def index(request: Request):
         "request": request,
         "authenticated": user is not None,
         "user": user,
+        "v": DEPLOY_VERSION,
     })
 
 
@@ -157,6 +161,7 @@ async def admin_page(request: Request):
     return templates.TemplateResponse("admin.html", {
         "request": request,
         "user": user,
+        "v": DEPLOY_VERSION,
     })
 
 
