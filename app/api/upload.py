@@ -53,10 +53,11 @@ def _accept_tracked_changes(word_path: str, output_path: str) -> bool:
         return False
 
 
-def _convert_word_to_pdf(word_path: str, output_dir: str) -> str:
-    """Convert Word document to PDF using LibreOffice headless."""
-    # Try to accept tracked changes (overwrite in-place since it's our copy)
-    _accept_tracked_changes(word_path, word_path)
+def _convert_to_pdf(word_path: str, output_dir: str) -> str:
+    """Convert Word/Excel document to PDF using LibreOffice headless."""
+    # Try to accept tracked changes for Word files (harmless no-op for others)
+    if word_path.lower().endswith(('.docx', '.doc')):
+        _accept_tracked_changes(word_path, word_path)
 
     lo_bin = _find_libreoffice()
     result = subprocess.run(
@@ -97,7 +98,7 @@ async def upload_pdf(
 
     # Convert Word/Excel to PDF if needed
     if ext in (".docx", ".doc", ".xlsx", ".xls"):
-        pdf_path = await asyncio.to_thread(_convert_word_to_pdf, raw_path, upload_dir)
+        pdf_path = await asyncio.to_thread(_convert_to_pdf, raw_path, upload_dir)
         final_path = os.path.join(upload_dir, f"{file_id}.pdf")
         os.rename(pdf_path, final_path)
         os.remove(raw_path)
