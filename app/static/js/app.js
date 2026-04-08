@@ -132,7 +132,7 @@
         setTimeout(async () => {
             if (isWordUpload) {
                 pdfDoc = null;
-                renderAllPagesFromServer();
+                await renderAllPagesFromServer();
             } else {
                 const pdfData = await file.arrayBuffer();
                 pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
@@ -189,6 +189,7 @@
         pageCount.textContent = `${totalPages} 页`;
         previewTitle.textContent = '合同预览';
 
+        const loadPromises = [];
         for (let i = 0; i < previewUrls.length; i++) {
             const wrapper = document.createElement('div');
             wrapper.className = 'page-wrapper';
@@ -201,16 +202,21 @@
             const canvas = document.createElement('canvas');
             canvas.dataset.pageNum = i;
 
-            const img = new window.Image();
-            img.onload = function () {
-                const maxW = previewScroll.clientWidth - 48;
-                const scale = Math.min(maxW / img.width, 2);
-                canvas.width = img.width * scale;
-                canvas.height = img.height * scale;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            };
-            img.src = previewUrls[i];
+            const p = new Promise(resolve => {
+                const img = new window.Image();
+                img.onload = function () {
+                    const maxW = previewScroll.clientWidth - 48;
+                    const scale = Math.min(maxW / img.width, 2);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve();
+                };
+                img.onerror = resolve;
+                img.src = previewUrls[i];
+            });
+            loadPromises.push(p);
 
             wrapper.appendChild(label);
             wrapper.appendChild(canvas);
@@ -218,6 +224,7 @@
         }
 
         enableCanvasClicks();
+        return Promise.all(loadPromises);
     }
 
     // ── Result preview ──
@@ -416,13 +423,24 @@
         if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
         const scrollRect = previewScroll.getBoundingClientRect();
-        // Normalized → CSS pixels on page
         const cx = xNorm * rect.width;
         const cy = yNorm * rect.height;
         stampMarker.hidden = false;
         stampMarker.style.left = (rect.left - scrollRect.left + previewScroll.scrollLeft + cx - 40) + 'px';
         stampMarker.style.top = (rect.top - scrollRect.top + previewScroll.scrollTop + cy - 40) + 'px';
     }
+
+    // Reposition marker on window resize so it stays on the correct spot
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            const pos = manualPosition || detectedPosition;
+            if (pos && !stampMarker.hidden) {
+                showMarkerByNorm(pos.page, pos.x_norm, pos.y_norm);
+            }
+        }, 150);
+    });
 
     // ── Draggable stamp marker ──
     let dragging = false, dragStartX, dragStartY, markerStartX, markerStartY;
