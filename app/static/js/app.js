@@ -367,17 +367,14 @@
             const pos = data.positions[0];
             const canvas = pagesContainer.querySelector(`canvas[data-page-num="${pos.page}"]`);
 
-            if (pdfDoc && !isWordUpload && canvas) {
-                // Convert PDF points → canvas pixels so all positions
-                // share the same coordinate system as manual clicks
-                const page = await pdfDoc.getPage(pos.page + 1);
-                const viewport = page.getViewport({ scale: 1 });
-                const displayScale = canvas.width / viewport.width;
+            // Backend returns normalized 0-1 coordinates.
+            // Convert to canvas pixels: simply multiply by canvas size.
+            if (canvas) {
                 detectedPosition = {
                     keyword: pos.keyword,
                     page: pos.page,
-                    x: pos.x * displayScale,
-                    y: pos.y * displayScale,
+                    x: pos.x_norm * canvas.width,
+                    y: pos.y_norm * canvas.height,
                 };
             } else {
                 detectedPosition = pos;
