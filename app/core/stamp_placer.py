@@ -198,57 +198,60 @@ MAX_STAMP_PX = 500  # Max stamp dimension in pixels
 
 
 def _age_stamp(img: Image.Image) -> Image.Image:
-    """Make a stamp image look like a real physical seal impression.
+    """Make a stamp image look like a heavily used, scanned seal impression.
 
-    Simulates: ink fade, uneven pressure, slight blur, noise, micro-rotation.
+    Simulates: strong ink fade, uneven pressure, blur, noise, micro-rotation.
     Input must be RGBA.
     """
     w, h = img.size
 
-    # ── 1. Desaturate: real stamp ink is never perfectly vivid ──
+    # ── 1. Heavy desaturation: washed-out ink look ──
     rgb = img.convert("RGB")
     enhancer = ImageEnhance.Color(rgb)
-    rgb = enhancer.enhance(random.uniform(0.55, 0.75))  # 55-75% saturation
+    rgb = enhancer.enhance(random.uniform(0.30, 0.50))  # 30-50% saturation
 
-    # ── 2. Slight brightness reduction (ink is slightly darker than digital) ──
+    # ── 2. Brightness boost to wash out the color (lighter = more faded) ──
     enhancer = ImageEnhance.Brightness(rgb)
-    rgb = enhancer.enhance(random.uniform(0.88, 0.95))
+    rgb = enhancer.enhance(random.uniform(1.10, 1.30))
+
+    # ── 3. Lower contrast for that flat scanned look ──
+    enhancer = ImageEnhance.Contrast(rgb)
+    rgb = enhancer.enhance(random.uniform(0.60, 0.80))
 
     # Merge back with original alpha
     img = Image.merge("RGBA", (*rgb.split(), img.split()[3]))
 
-    # ── 3. Uneven ink distribution (pressure map) ──
-    # Create a smooth random mask simulating uneven stamp pressure
+    # ── 4. Aggressive uneven ink distribution (pressure map) ──
     arr = np.array(img, dtype=np.float32)
     alpha = arr[:, :, 3]
-    # Generate low-frequency pressure variation
-    small_h, small_w = max(4, h // 40), max(4, w // 40)
-    pressure = np.random.uniform(0.65, 1.0, (small_h, small_w)).astype(np.float32)
+    small_h, small_w = max(4, h // 30), max(4, w // 30)
+    pressure = np.random.uniform(0.35, 1.0, (small_h, small_w)).astype(np.float32)
     pressure_img = Image.fromarray((pressure * 255).astype(np.uint8), mode="L")
     pressure_map = np.array(
         pressure_img.resize((w, h), Image.BILINEAR), dtype=np.float32
     ) / 255.0
-    # Apply pressure to alpha channel (transparent where pressure is low)
     alpha = alpha * pressure_map
+    # Overall transparency reduction
+    alpha = alpha * random.uniform(0.55, 0.75)
     arr[:, :, 3] = alpha
     img = Image.fromarray(arr.astype(np.uint8), "RGBA")
 
-    # ── 4. Slight Gaussian blur (ink spread on paper) ──
-    blur_r = random.uniform(0.4, 0.8)
+    # ── 5. Stronger Gaussian blur (ink bleed on paper) ──
+    blur_r = random.uniform(0.7, 1.3)
     img = img.filter(ImageFilter.GaussianBlur(radius=blur_r))
 
-    # ── 5. Fine noise on the stamp pixels ──
+    # ── 6. Heavier noise on stamp pixels ──
     arr = np.array(img, dtype=np.float32)
-    mask = arr[:, :, 3] > 20  # only add noise where stamp has content
-    noise = np.random.normal(0, 4, (h, w, 3))
+    mask = arr[:, :, 3] > 10
+    noise = np.random.normal(0, 8, (h, w, 3))
     for c in range(3):
         channel = arr[:, :, c]
         channel[mask] = np.clip(channel[mask] + noise[:, :, c][mask], 0, 255)
         arr[:, :, c] = channel
     img = Image.fromarray(arr.astype(np.uint8), "RGBA")
 
-    # ── 6. Micro-rotation (hand shake) ──
-    angle = random.uniform(-2.0, 2.0)
+    # ── 7. Micro-rotation (hand shake) ──
+    angle = random.uniform(-2.5, 2.5)
     img = img.rotate(angle, expand=True, fillcolor=(0, 0, 0, 0))
 
     return img

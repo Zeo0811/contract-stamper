@@ -42,6 +42,13 @@ def place_seam_stamps(pdf_path: str, stamp_path: str) -> str:
     # Get the actual downscaled stamp height from the first strip (before rotation padding)
     # Target: stamp displays at 120pt (≈42mm) high in PDF
     target_h = 120.0
+    # Pick a random vertical center for the whole seam stamp set,
+    # anywhere in the middle 60% of the page (not too close to edges)
+    first_page = doc[0]
+    page_h_ref = first_page.rect.height
+    margin = page_h_ref * 0.20  # keep 20% margin top & bottom
+    seam_center_y = random.uniform(margin + target_h / 2, page_h_ref - margin - target_h / 2)
+
     for i in range(num_pages):
         page = doc[i]
         strip_img = Image.open(strips[i])
@@ -51,10 +58,11 @@ def place_seam_stamps(pdf_path: str, stamp_path: str) -> str:
         display_h = target_h
         page_w = page.rect.width
         page_h = page.rect.height
-        v_offset = random.uniform(-8, 8)
-        h_offset = random.uniform(-4, 4)
+        # Per-page jitter on top of the shared center
+        v_jitter = random.uniform(-15, 15)
+        h_offset = random.uniform(-6, 6)
         x0 = page_w - display_w + h_offset
-        y0 = (page_h - display_h) / 2 + v_offset
+        y0 = seam_center_y - display_h / 2 + v_jitter
         x1 = page_w + h_offset
         y1 = y0 + display_h
         stamp_rect = fitz.Rect(x0, y0, x1, y1)
