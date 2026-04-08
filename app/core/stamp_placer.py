@@ -13,8 +13,13 @@ except ImportError:
     HAS_TESSERACT = False
 
 def _generate_keywords(party: str) -> list[str]:
-    """Generate keyword variations covering different bracket/punctuation styles."""
-    # Common seal-related suffixes
+    """Generate keyword variations covering different bracket/punctuation styles.
+
+    Keywords are ordered by specificity: most specific first (with 盖章/签章),
+    then plain party labels (甲方：/乙方：) as fallback for contracts that
+    don't use the formal (盖章) format.
+    """
+    # High-specificity: party + seal action
     suffixes = [
         "（盖章）", "(盖章)", "（盖章)", "(盖章）",
         "签章", "盖章",
@@ -29,6 +34,14 @@ def _generate_keywords(party: str) -> list[str]:
     keywords = []
     for s in suffixes:
         keywords.append(party + s)
+    # Low-specificity fallback: plain party labels in signature blocks
+    # These are common in simpler contracts: "甲方：XXX公司  乙方：YYY公司"
+    keywords.extend([
+        party + "：",   # fullwidth colon
+        party + ":",    # ascii colon
+        party + " ：",
+        party + " :",
+    ])
     return keywords
 
 
