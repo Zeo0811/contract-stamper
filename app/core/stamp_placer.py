@@ -285,9 +285,11 @@ def _age_stamp(img: Image.Image, intensity: int = 30) -> Image.Image:
             arr[:, :, c] = ch
         img = Image.fromarray(arr.astype(np.uint8), "RGBA")
 
-    # ── 7. Micro-rotation ──
-    angle = random.uniform(-t * 2.5, t * 2.5)
-    if abs(angle) > 0.2:
+    # ── 7. Rotation (hand placement variance) ──
+    # Base ±3° even at low intensity, up to ±10° at full
+    max_angle = 3.0 + t * 7.0
+    angle = random.uniform(-max_angle, max_angle)
+    if abs(angle) > 0.5:
         img = img.rotate(angle, expand=True, fillcolor=(0, 0, 0, 0))
 
     return img
