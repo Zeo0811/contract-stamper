@@ -1,27 +1,33 @@
 # Contract Stamper
 
-An automated contract stamping tool that uploads Word/PDF contracts, auto-detects seal placement positions, applies digital seals with riding seam stamps, and simulates realistic scanning effects — outputting production-ready PDFs.
+An automated contract stamping tool that uploads PDF/Word/Excel contracts, auto-detects seal placement positions via text search and OCR, applies digital seals with riding seam stamps, and simulates realistic scanning effects — outputting production-ready PDFs.
 
 ## Features
 
-- **Multi-Format Upload** — Supports `.docx`, `.doc`, and `.pdf`. Word files are automatically converted to PDF (tracked changes are accepted, producing the final version).
-- **Auto Seal Detection** — Searches for keywords like "Party A (Seal)" / "Party B (Seal)" in the document to automatically locate stamp positions. Manual click-to-place is also supported when keywords are not found.
-- **Party Switching** — Toggle between Party A and Party B seal positions with one click.
-- **Riding Seam Stamps** — Automatically slices the seal image across all pages and places each strip along the right edge, with random offset and rotation for a realistic hand-stamped look.
-- **Scan Effect Simulation** — Adjustable intensity (light / medium / heavy) with a 7-layer processing pipeline: brightness shift, sensor noise, page tilt, text softening, non-uniform brightness, edge shadows, and four-corner darkening.
-- **Admin Dashboard** — User management (create/delete users, role control) and stamp management (upload seal PNGs with associated company names).
-- **Processing History** — View past stamping operations in-app with re-download support.
+- **Multi-Format Upload** — Supports `.pdf`, `.docx`, `.doc`, `.xlsx`, `.xls`. Word and Excel files are automatically converted to PDF via LibreOffice.
+- **Auto Seal Detection** — Three-tier detection: PyMuPDF text search → Unicode-normalized fallback → Tesseract OCR for scanned documents. Scans from the last page backward to prioritize signature blocks.
+- **Party Switching** — Toggle between Party A (甲方) and Party B (乙方) seal positions with one click. Switching automatically re-detects the position.
+- **Riding Seam Stamps** — Slices the seal across all pages along the right edge, with configurable vertical position (random / top / center / bottom) and per-page jitter for a natural look.
+- **Stamp Aging Effect** — Adjustable intensity (0–100) simulating real stamp impressions: ink fade via transparency, mild desaturation, uneven pressure map, Gaussian blur, noise, and random rotation (±3° to ±10°). Red color is preserved even at high intensity.
+- **Scan Effect Simulation** — Adjustable intensity with a 7-layer pipeline: brightness shift, sensor noise, page tilt, text softening, non-uniform brightness, edge shadows, and four-corner darkening.
+- **Instant Stamp Selection** — All stamps are pre-uploaded in the background when the page loads. Clicking a stamp is instant with no loading delay.
+- **Normalized Coordinates** — Seal positions use 0–1 normalized coordinates, ensuring correct marker placement regardless of browser window size.
+- **Excel Support** — Excel files are converted to PDF, with seam stamps auto-disabled and manual stamp placement via click.
+- **Admin Dashboard** — User management (create/delete, role control) and stamp management (upload seal PNGs with company names, image preview, upload progress indicator).
+- **Cache-Busting** — Static files include a deploy timestamp query parameter, ensuring browsers load fresh JS/CSS after every deployment.
+- **Processing History** — View past stamping operations with re-download support.
 - **Completion Animation** — Fireworks celebration on successful processing.
-- **RESTful API** — Full programmatic access to all features; supports MCP/Skill integration.
-- **Multi-User Auth** — Session token + Bearer API key authentication with role-based access control.
+- **RESTful API** — Full programmatic access; supports MCP/Skill integration.
+- **Multi-User Auth** — Session token + Bearer API key with role-based access control.
 
 ## Tech Stack
 
 | Layer | Technologies |
 |-------|-------------|
-| **Backend** | Python 3.11, FastAPI, PyMuPDF (fitz), Pillow, NumPy |
+| **Backend** | Python 3.11, FastAPI, PyMuPDF (fitz), Pillow, NumPy, pytesseract |
 | **Frontend** | Vanilla HTML/CSS/JS, PDF.js |
-| **Document Conversion** | LibreOffice (headless), python-docx |
+| **OCR** | Tesseract (chi_sim + chi_tra + eng) |
+| **Document Conversion** | LibreOffice (headless) — Writer + Calc |
 | **Deployment** | Docker, Railway |
 
 ## Quick Start
@@ -29,13 +35,14 @@ An automated contract stamping tool that uploads Word/PDF contracts, auto-detect
 ### Local Development
 
 ```bash
-# 1. Install Python 3.11 and LibreOffice
+# 1. Install Python 3.11, LibreOffice, and Tesseract
 # macOS
-brew install python@3.11
+brew install python@3.11 tesseract tesseract-lang
 brew install --cask libreoffice
 
 # Ubuntu/Debian
-sudo apt install python3.11 python3.11-venv libreoffice
+sudo apt install python3.11 python3.11-venv libreoffice tesseract-ocr \
+  tesseract-ocr-chi-sim tesseract-ocr-chi-tra
 
 # 2. Create virtual environment and install dependencies
 python3.11 -m venv .venv
@@ -86,41 +93,35 @@ docker run -p 8000:8000 \
 ```
 contract-stamper/
 ├── app/
-│   ├── main.py              # FastAPI entry point, route mounting, auth endpoints
+│   ├── main.py              # FastAPI entry point, route mounting, auth, cache-busting
 │   ├── config.py             # Environment variable configuration
 │   ├── auth.py               # Multi-user auth system (token + API key)
 │   ├── api/
-│   │   ├── upload.py         # File upload (PDF/Word), Word→PDF conversion
-│   │   ├── detect.py         # Keyword-based seal position detection
-│   │   ├── stamp.py          # Async stamping (seal + riding seam + scan effect)
+│   │   ├── upload.py         # File upload (PDF/Word/Excel), conversion to PDF
+│   │   ├── detect.py         # 3-tier seal position detection (text + normalize + OCR)
+│   │   ├── stamp.py          # Async stamping (seal + aging + riding seam + scan effect)
 │   │   ├── result.py         # Task status polling and result download
-│   │   └── admin.py          # Admin API (user/stamp management)
+│   │   └── admin.py          # Admin API (user/stamp management, UUID filenames)
 │   ├── core/
 │   │   ├── pdf_processor.py  # PDF reading and preview rendering
-│   │   ├── stamp_placer.py   # Keyword detection + seal overlay
+│   │   ├── stamp_placer.py   # Keyword detection, OCR, seal aging + overlay
 │   │   ├── seam_stamp.py     # Riding seam stamp slicing and placement
 │   │   └── scan_effect.py    # Scan effect simulation (7-layer pipeline)
 │   ├── static/
-│   │   ├── css/style.css     # Green theme styling
+│   │   ├── css/style.css     # Design system (green theme, focus states, responsive)
 │   │   ├── js/
-│   │   │   ├── app.js        # Main page interaction logic
-│   │   │   └── admin.js      # Admin dashboard logic
+│   │   │   ├── app.js        # Main page (normalized coords, preload, resize handler)
+│   │   │   └── admin.js      # Admin dashboard (upload progress, image preview)
 │   │   ├── stamps/           # Preset stamp directory (admin-managed)
 │   │   ├── icons/            # PWA icons (16–512px)
 │   │   ├── logo.png          # Brand logo
 │   │   ├── favicon.ico
 │   │   └── manifest.json     # PWA manifest
 │   └── templates/
-│       ├── index.html        # Main user interface
+│       ├── index.html        # Main UI (cache-busted static refs)
 │       └── admin.html        # Admin dashboard
 ├── tests/
-│   ├── conftest.py           # Test fixtures (sample PDF, stamp)
-│   ├── test_detect.py        # Keyword detection tests
-│   ├── test_stamp_placer.py  # Stamp placement tests
-│   ├── test_seam_stamp.py    # Riding seam tests
-│   ├── test_scan_effect.py   # Scan effect tests
-│   └── test_integration.py   # End-to-end workflow tests
-├── Dockerfile                # Docker build configuration
+├── Dockerfile                # Python 3.11 + LibreOffice Writer/Calc + Tesseract OCR
 ├── railway.toml              # Railway deployment configuration
 ├── requirements.txt          # Python dependencies
 ├── API.md                    # Full API reference
@@ -135,11 +136,11 @@ Full API documentation is available in **[API.md](API.md)**.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/upload` | Upload a contract file (PDF/Word), returns `file_id` |
+| `POST` | `/upload` | Upload a contract file (PDF/Word/Excel), returns `file_id` |
 | `POST` | `/upload/stamp` | Upload a seal PNG image, returns `stamp_id` |
 | `GET` | `/stamps/list` | List all preset stamps with metadata |
-| `POST` | `/detect` | Auto-detect seal positions by keyword (Party A/B) |
-| `POST` | `/stamp` | Start async stamping process, returns `task_id` |
+| `POST` | `/detect` | Auto-detect seal positions (text search + OCR fallback) |
+| `POST` | `/stamp` | Start async stamping, returns `task_id` |
 | `GET` | `/result/{task_id}` | Poll task status and progress (0–100%) |
 | `GET` | `/download/{task_id}` | Download the stamped PDF result |
 | `POST` | `/login` | User authentication, returns session token |
@@ -152,56 +153,18 @@ Full API documentation is available in **[API.md](API.md)**.
 Upload contract → Upload/select stamp → Detect position → Execute stamping → Poll status → Download result
 ```
 
-### Quick Example (cURL)
+## Stamp Aging Effect
 
-```bash
-API="https://your-deployment-url.com"
-KEY="YOUR_API_KEY"
-AUTH="Authorization: Bearer $KEY"
+The `stamp_aging` parameter (0–100, default 70) controls how realistic the seal impression looks:
 
-# 1. Upload contract
-UPLOAD=$(curl -s -X POST "$API/api/v1/upload" -H "$AUTH" -F "file=@contract.docx")
-FILE_ID=$(echo $UPLOAD | jq -r '.file_id')
+| Range | Label | Description |
+|-------|-------|-------------|
+| **0** | Off | No aging effect, original stamp image |
+| **1–25** | Light | Subtle fade, slight blur and rotation (±5°) |
+| **26–55** | Medium | Noticeable fade, uneven ink, blur, noise |
+| **56–100** | Heavy | Strong transparency fade, large rotation (±10°), heavy pressure variation |
 
-# 2. Upload seal image
-STAMP_UPLOAD=$(curl -s -X POST "$API/api/v1/upload/stamp" -H "$AUTH" -F "file=@seal.png")
-STAMP_ID=$(echo $STAMP_UPLOAD | jq -r '.stamp_id')
-
-# 3. Auto-detect seal position
-DETECT=$(curl -s -X POST "$API/api/v1/detect" \
-  -H "$AUTH" -H "Content-Type: application/json" \
-  -d "{\"file_id\": \"$FILE_ID\", \"party\": \"乙方\"}")
-
-PAGE=$(echo $DETECT | jq '.positions[0].page')
-X=$(echo $DETECT | jq '.positions[0].x')
-Y=$(echo $DETECT | jq '.positions[0].y')
-
-# 4. Execute stamping
-TASK_ID=$(curl -s -X POST "$API/api/v1/stamp" \
-  -H "$AUTH" -H "Content-Type: application/json" \
-  -d "{
-    \"file_id\": \"$FILE_ID\",
-    \"stamp_id\": \"$STAMP_ID\",
-    \"party_b_position\": {\"page\": $PAGE, \"x\": $X, \"y\": $Y},
-    \"riding_seam\": true,
-    \"scan_effect\": 50,
-    \"original_filename\": \"contract.docx\"
-  }" | jq -r '.task_id')
-
-# 5. Poll until completed
-while true; do
-  STATUS=$(curl -s "$API/api/v1/result/$TASK_ID" -H "$AUTH")
-  S=$(echo $STATUS | jq -r '.status')
-  echo "Status: $S ($(echo $STATUS | jq '.progress')%)"
-  [ "$S" = "completed" ] && break
-  [ "$S" = "error" ] && { echo "Error: $(echo $STATUS | jq -r '.error')"; exit 1; }
-  sleep 1
-done
-
-# 6. Download result
-curl -o stamped_contract.pdf "$API/api/v1/download/$TASK_ID" -H "$AUTH"
-echo "Downloaded: stamped_contract.pdf"
-```
+The aging effect preserves the stamp's red color — fading is achieved primarily through alpha transparency rather than desaturation.
 
 ## Scan Effect Quality
 
@@ -210,58 +173,77 @@ The `scan_effect` parameter (0–100) controls simulated scan quality:
 | Range | Label | Description |
 |-------|-------|-------------|
 | **0** | Off | No scan effect applied |
-| **80–100** | Light | High quality: minimal noise, slight tilt (0–0.8°), DPI 200 |
-| **40–79** | Medium | Balanced: visible noise, moderate tilt (0.8–1.5°), DPI 150–200 |
-| **1–39** | Heavy | Low quality: heavy noise, strong tilt (1.5–2.5°), dark corners, DPI 120–150 |
+| **80–100** | Light | High quality: minimal noise, slight tilt, DPI 200 |
+| **40–79** | Medium | Balanced: visible noise, moderate tilt, DPI 150–200 |
+| **1–39** | Heavy | Low quality: heavy noise, strong tilt, dark corners, DPI 120–150 |
 
-The 7-layer scan effect pipeline includes:
+## Changelog
 
-1. **Brightness shift** — Simulates scanner light source
-2. **Non-uniform brightness** — Sensor characteristics with horizontal banding
-3. **Text softening** — Optical capture simulation
-4. **Luminance-weighted noise** — Sensor noise modeling
-5. **Random tilt** — Page misalignment effect
-6. **Edge shadow** — Page lift effect along edges
-7. **Four-corner darkening** — Vignetting effect
+### v1.1.0 (2026-04-08)
+
+**Seal Upload & Display**
+- Fixed thumbnail display for PNG stamps (UUID-based filenames bypass regex validation)
+- Added upload progress spinner and image preview in admin panel
+- Cache-busting (`?v=timestamp`) for static files — no more stale JS/CSS after deploy
+
+**Seal Position Detection**
+- Three-tier detection: PyMuPDF text → Unicode normalization → Tesseract OCR (scanned PDFs)
+- Scans from last page backward (signature blocks are at the end)
+- Expanded keyword list: 34 variations including plain "甲方：" / "乙方：" format
+- Normalized 0–1 coordinate system eliminates browser-width-dependent marker drift
+- Marker repositions correctly on window resize
+
+**Stamp Aging Effect**
+- Configurable intensity (0–100) via UI slider, default 70
+- Red color preserved even at heavy intensity (fading via alpha, not desaturation)
+- Wider rotation range: ±3° base up to ±10° at full intensity
+- Uneven ink pressure, Gaussian blur, noise all scale with intensity
+
+**Riding Seam Stamps**
+- Configurable vertical position: random / top / center / bottom
+- Default position: top (~20% page height)
+- Wider randomization range with per-page jitter
+
+**Excel Support**
+- Upload `.xlsx` / `.xls` files (converted to PDF via LibreOffice Calc)
+- Auto-disables seam stamps, prompts manual stamp placement
+
+**UI/UX Improvements**
+- Instant stamp selection via background preloading
+- Word document preview waits for all images before detection
+- Circular reset button with rotate-on-hover animation
+- Focus-visible keyboard accessibility for all interactive elements
+- Consistent design tokens (colors, borders, shadows)
+- Seam position dropdown styled to match design system
+- Preloaded stamps show green dot indicator
+
+**Bug Fixes**
+- Manual click position now correctly overrides auto-detection
+- Fixed coordinate system mismatch between PDF points and canvas pixels
+- Fixed Word upload marker not scrolling to detected page
+
+### v1.0.0
+
+Initial release with PDF/Word upload, keyword detection, riding seam stamps, scan effect simulation, admin dashboard, and multi-user auth.
 
 ## Testing
 
 ```bash
-# Run all tests
-pytest tests/
-
-# Run with verbose output
 pytest tests/ -v
-
-# Run a specific test file
-pytest tests/test_detect.py -v
-
-# Run with coverage
 pytest tests/ --cov=app
 ```
 
 ## Authentication
 
-The application supports two authentication methods:
+Two authentication methods:
 
-1. **Session Token** — Obtained via the `/login` endpoint. Tokens are stored in-memory with a 24-hour TTL. Used by the web interface.
-2. **API Key** — Configured via the `API_KEY` environment variable. Passed as a Bearer token in the `Authorization` header. Used for programmatic API access.
-
-### User Roles
+1. **Session Token** — Via `/login` endpoint, 24-hour TTL, used by web interface.
+2. **API Key** — Via `API_KEY` env var, passed as Bearer token, used for programmatic access.
 
 | Role | Permissions |
 |------|------------|
 | `admin` | Full access: stamp contracts, manage users, manage stamps |
 | `user` | Standard access: stamp contracts, view history |
-
-Admin users can manage other users and stamps through the admin dashboard at `/admin`.
-
-## Storage
-
-The application uses file-based storage (no database required):
-
-- **Temporary storage** (`UPLOAD_DIR`): Uploaded files, stamps, previews, and results. Auto-cleaned after `FILE_TTL_SECONDS` (default: 1 hour).
-- **Persistent storage** (`DATA_DIR`): User accounts (`users.json`), stamp metadata (`stamps_meta.json`), and preset stamp images.
 
 ## License
 
