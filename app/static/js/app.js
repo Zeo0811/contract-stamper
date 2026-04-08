@@ -526,7 +526,7 @@
         processBtn.disabled = true;
         showStatus('loading', '处理中...');
 
-        const pos = detectedPosition || manualPosition;
+        const pos = manualPosition || detectedPosition;
         let pdfX, pdfY;
 
         if (pdfDoc && !isWordUpload) {
