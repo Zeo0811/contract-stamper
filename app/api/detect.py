@@ -1,3 +1,4 @@
+import asyncio
 import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -22,5 +23,5 @@ async def detect(
     pdf_path = os.path.join(UPLOAD_DIR, "uploads", f"{req.file_id}.pdf")
     if not os.path.exists(pdf_path):
         raise HTTPException(status_code=404, detail="File not found")
-    positions = detect_keywords(pdf_path, party=req.party)
+    positions = await asyncio.to_thread(detect_keywords, pdf_path, req.party)
     return {"found": len(positions) > 0, "positions": positions}

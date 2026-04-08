@@ -960,6 +960,17 @@ body {
     background: var(--n50);
 }
 
+.admin-stamp-preview {
+    width: 80px; height: 80px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--n50);
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin .8s linear infinite; }
+
 .admin-form {
     display: flex; gap: 10px; align-items: center;
     margin-top: 18px; padding-top: 18px;

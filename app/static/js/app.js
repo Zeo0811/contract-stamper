@@ -317,17 +317,23 @@
             card.classList.add('selected');
 
             showStatus('loading', '加载印章中...');
-            const imgResp = await fetch(card.dataset.url);
-            const blob = await imgResp.blob();
-            const fd = new FormData();
-            fd.append('file', blob, card.dataset.name + '.png');
-            const uploadResp = await api('POST', '/api/v1/upload/stamp', fd, true);
-            if (!uploadResp.ok) { showStatus('error', '印章加载失败'); return; }
-            const uploadData = await uploadResp.json();
-            stampId = uploadData.stamp_id;
-            showStatus('success', `已选择: ${card.dataset.name}`);
-            hideStatus();
-            checkReady();
+            try {
+                const imgResp = await fetch(card.dataset.url);
+                if (!imgResp.ok) { showStatus('error', '印章图片加载失败'); return; }
+                const blob = await imgResp.blob();
+                if (!blob.type.startsWith('image/')) { showStatus('error', '印章文件格式无效'); return; }
+                const fd = new FormData();
+                fd.append('file', blob, card.dataset.name + '.png');
+                const uploadResp = await api('POST', '/api/v1/upload/stamp', fd, true);
+                if (!uploadResp.ok) { showStatus('error', '印章加载失败'); return; }
+                const uploadData = await uploadResp.json();
+                stampId = uploadData.stamp_id;
+                showStatus('success', `已选择: ${card.dataset.name}`);
+                hideStatus();
+                checkReady();
+            } catch (err) {
+                showStatus('error', '印章加载出错');
+            }
         });
     }
 
