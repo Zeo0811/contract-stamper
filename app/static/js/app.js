@@ -7,6 +7,7 @@
     let pdfDoc = null;
     let totalPages = 0;
     let detectedPosition = null;
+    let isExcelUpload = false;
     let manualPosition = null;
     let resultTaskId = null;
     let previewUrls = [];
@@ -105,11 +106,13 @@
     async function uploadPdf(file) {
         const ext = file.name.split('.').pop().toLowerCase();
         isWordUpload = (ext === 'docx' || ext === 'doc');
+        isExcelUpload = (ext === 'xlsx' || ext === 'xls');
         lastFileName = file.name;
 
         // Show uploading state on welcome screen
         welcomeUploadZone.classList.add('uploading');
-        welcomeStatusText.textContent = isWordUpload ? '上传并转换 Word 中...' : '上传合同中...';
+        const statusMsg = isExcelUpload ? '上传并转换 Excel 中...' : isWordUpload ? '上传并转换 Word 中...' : '上传合同中...';
+        welcomeStatusText.textContent = statusMsg;
 
         const fd = new FormData();
         fd.append('file', file);
@@ -130,7 +133,7 @@
 
         // Render preview after a small delay to let workspace appear
         setTimeout(async () => {
-            if (isWordUpload) {
+            if (isWordUpload || isExcelUpload) {
                 pdfDoc = null;
                 await renderAllPagesFromServer();
             } else {
@@ -140,7 +143,14 @@
                 await renderAllPages();
             }
 
-            await detectKeywords();
+            if (isExcelUpload) {
+                // Excel: no auto-detection, user places stamp manually
+                seamToggle.checked = false;
+                seamToggle.dispatchEvent(new Event('change'));
+                previewWarning.classList.add('visible');
+            } else {
+                await detectKeywords();
+            }
             checkReady();
         }, 500);
     }
@@ -281,7 +291,7 @@
 
     function resetContractState() {
         fileId = null; pdfDoc = null; detectedPosition = null; manualPosition = null;
-        isWordUpload = false; previewUrls = []; resultTaskId = null; isCompleted = false;
+        isWordUpload = false; isExcelUpload = false; previewUrls = []; resultTaskId = null; isCompleted = false;
         pagesContainer.innerHTML = '';
         pageCount.textContent = '';
         previewTitle.textContent = '合同预览';

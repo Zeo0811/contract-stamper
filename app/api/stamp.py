@@ -34,7 +34,7 @@ class StampRequest(BaseModel):
     riding_seam: bool = True
     seam_position: str = "top"  # random, top, center, bottom
     scan_effect: int = 50  # 0=off, 1-39=heavy, 40-79=medium, 80-100=light
-    stamp_aging: int = 30  # 0=off, 1-100=intensity of stamp aging effect
+    stamp_aging: int = 70  # 0=off, 1-100=intensity of stamp aging effect
     original_filename: str = ""
 
 
