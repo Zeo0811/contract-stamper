@@ -10,7 +10,7 @@ from app.core.pdf_processor import get_page_count, render_all_previews
 
 router = APIRouter(prefix="/api/v1")
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls"}
 
 
 def _find_libreoffice() -> str:
@@ -84,7 +84,7 @@ async def upload_pdf(
     filename = file.filename or ""
     ext = os.path.splitext(filename)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"不支持的文件格式，请上传 PDF 或 Word 文档")
+        raise HTTPException(status_code=400, detail="不支持的文件格式，请上传 PDF、Word 或 Excel 文档")
 
     file_id = uuid.uuid4().hex[:12]
     upload_dir = os.path.join(UPLOAD_DIR, "uploads")
@@ -95,13 +95,12 @@ async def upload_pdf(
     with open(raw_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    # Convert Word to PDF if needed
-    if ext in (".docx", ".doc"):
+    # Convert Word/Excel to PDF if needed
+    if ext in (".docx", ".doc", ".xlsx", ".xls"):
         pdf_path = await asyncio.to_thread(_convert_word_to_pdf, raw_path, upload_dir)
-        # Rename to standard file_id.pdf
         final_path = os.path.join(upload_dir, f"{file_id}.pdf")
         os.rename(pdf_path, final_path)
-        os.remove(raw_path)  # Clean up original Word file
+        os.remove(raw_path)
     else:
         final_path = raw_path  # Already PDF, but ensure naming
         if not raw_path.endswith(f"{file_id}.pdf"):
@@ -116,6 +115,7 @@ async def upload_pdf(
         "page_count": page_count,
         "previews": preview_urls,
         "converted_from": ext if ext != ".pdf" else None,
+        "is_excel": ext in (".xlsx", ".xls"),
     }
 
 

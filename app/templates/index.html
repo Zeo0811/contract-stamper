@@ -88,7 +88,7 @@
 
             {% if authenticated %}
             <div class="welcome-upload" id="welcomeUploadZone">
-                <input type="file" id="pdfInput" accept=".pdf,.docx,.doc" hidden>
+                <input type="file" id="pdfInput" accept=".pdf,.docx,.doc,.xlsx,.xls" hidden>
                 <div class="welcome-upload-content">
                     <div class="welcome-upload-icon">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -99,7 +99,7 @@
                         </svg>
                     </div>
                     <span class="welcome-upload-main">拖拽文件到此处，或点击选择</span>
-                    <span class="welcome-upload-hint">支持 PDF、Word (.docx / .doc)</span>
+                    <span class="welcome-upload-hint">支持 PDF、Word、Excel</span>
                 </div>
                 <div class="welcome-upload-status">
                     <div class="spinner"></div>
@@ -162,8 +162,8 @@
                 </div>
                 <div class="setting-row">
                     <span>印章做旧</span>
-                    <input type="range" id="agingSlider" min="0" max="100" value="30" class="slider">
-                    <span class="setting-val" id="agingVal">轻度</span>
+                    <input type="range" id="agingSlider" min="0" max="100" value="70" class="slider">
+                    <span class="setting-val" id="agingVal">重度</span>
                 </div>
                 <div class="setting-row">
                     <span>扫描强度</span>
