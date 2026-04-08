@@ -32,6 +32,7 @@ class StampRequest(BaseModel):
     stamp_id: str
     party_b_position: Position | None = None
     riding_seam: bool = True
+    seam_position: str = "random"  # random, top, center, bottom
     scan_effect: int = 50  # 0=off, 1-39=heavy, 40-79=medium, 80-100=light
     stamp_aging: int = 30  # 0=off, 1-100=intensity of stamp aging effect
     original_filename: str = ""
@@ -58,7 +59,11 @@ def _process_stamp(task_id: str, req: StampRequest):
 
         # Step 2: Place riding seam stamps
         if req.riding_seam:
-            current_pdf = place_seam_stamps(current_pdf, stamp_path, stamp_aging=req.stamp_aging)
+            current_pdf = place_seam_stamps(
+                current_pdf, stamp_path,
+                stamp_aging=req.stamp_aging,
+                position=req.seam_position,
+            )
             tasks[task_id]["progress"] = 60
 
         # Step 3: Apply scan effect
