@@ -111,14 +111,29 @@ def _search_ocr_words(ocr_words: list[dict], keyword: str) -> list[dict]:
     return results
 
 
+STAMP_OFFSET_Y = 60  # points below keyword text bottom to stamp center (~21mm)
+
+
+def _make_result(keyword, page_num, rect_x0, rect_y0, rect_w, rect_h, ocr=False):
+    """Build a detection result with stamp-center coordinates offset below the keyword."""
+    return {
+        "keyword": keyword,
+        "page": page_num,
+        # Stamp center: horizontally centered on keyword, vertically below it
+        "x": round(rect_x0 + rect_w / 2),
+        "y": round(rect_y0 + rect_h + STAMP_OFFSET_Y),
+        "width": round(rect_w),
+        "height": round(rect_h),
+        **({"ocr": True} if ocr else {}),
+    }
+
+
 def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
     """Detect seal-placement keywords in PDF.
 
     Scans from the LAST page backward because contracts typically
-    have the signature/seal block at the end.  Stops as soon as
-    matches are found on a page, returning them sorted with the
-    lowest position on the page (highest y) first — that is the
-    most likely seal target.
+    have the signature/seal block at the end.  Returns stamp-center
+    coordinates offset below the keyword text.
     """
     keywords = KEYWORDS_BY_PARTY.get(party, KEYWORDS_BY_PARTY["乙方"])
     doc = fitz.open(pdf_path)
@@ -133,14 +148,10 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
         for keyword in keywords:
             rects = page.search_for(keyword)
             for rect in rects:
-                page_results.append({
-                    "keyword": keyword,
-                    "page": page_num,
-                    "x": round(rect.x0),
-                    "y": round(rect.y0),
-                    "width": round(rect.width),
-                    "height": round(rect.height),
-                })
+                page_results.append(_make_result(
+                    keyword, page_num,
+                    rect.x0, rect.y0, rect.width, rect.height,
+                ))
 
         # ── Pass 2: normalized text fallback ──
         if not page_results:
@@ -153,14 +164,10 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
                     if not rects:
                         rects = page.search_for(keyword)
                     for rect in rects:
-                        page_results.append({
-                            "keyword": keyword,
-                            "page": page_num,
-                            "x": round(rect.x0),
-                            "y": round(rect.y0),
-                            "width": round(rect.width),
-                            "height": round(rect.height),
-                        })
+                        page_results.append(_make_result(
+                            keyword, page_num,
+                            rect.x0, rect.y0, rect.width, rect.height,
+                        ))
 
         # ── Pass 3: OCR fallback for scanned pages ──
         if not page_results:
@@ -170,15 +177,12 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
                 for keyword in keywords:
                     boxes = _search_ocr_words(ocr_words, keyword)
                     for box in boxes:
-                        page_results.append({
-                            "keyword": keyword,
-                            "page": page_num,
-                            "x": round(box["x0"]),
-                            "y": round(box["y0"]),
-                            "width": round(box["x1"] - box["x0"]),
-                            "height": round(box["y1"] - box["y0"]),
-                            "ocr": True,
-                        })
+                        page_results.append(_make_result(
+                            keyword, page_num,
+                            box["x0"], box["y0"],
+                            box["x1"] - box["x0"], box["y1"] - box["y0"],
+                            ocr=True,
+                        ))
                     if page_results:
                         break
 
