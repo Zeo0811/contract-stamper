@@ -365,22 +365,15 @@
         const data = await resp.json();
         if (data.found && data.positions.length > 0) {
             const pos = data.positions[0];
-            const canvas = pagesContainer.querySelector(`canvas[data-page-num="${pos.page}"]`);
+            // Store normalized 0-1 coords directly; convert at point of use
+            detectedPosition = {
+                keyword: pos.keyword,
+                page: pos.page,
+                x_norm: pos.x_norm,
+                y_norm: pos.y_norm,
+            };
 
-            // Backend returns normalized 0-1 coordinates.
-            // Convert to canvas pixels: simply multiply by canvas size.
-            if (canvas) {
-                detectedPosition = {
-                    keyword: pos.keyword,
-                    page: pos.page,
-                    x: pos.x_norm * canvas.width,
-                    y: pos.y_norm * canvas.height,
-                };
-            } else {
-                detectedPosition = pos;
-            }
-
-            showStampMarkerOnPage(detectedPosition.page, detectedPosition.x, detectedPosition.y);
+            showMarkerByNorm(detectedPosition.page, detectedPosition.x_norm, detectedPosition.y_norm);
             showStatus('success', `已识别: "${detectedPosition.keyword}" 在第 ${detectedPosition.page + 1} 页`);
             const wrapper = pagesContainer.querySelector(`[data-page-num="${detectedPosition.page}"]`);
             if (wrapper) wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -396,19 +389,18 @@
             canvas.style.cursor = 'crosshair';
             canvas.addEventListener('click', e => {
                 const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
+                const cssX = e.clientX - rect.left;
+                const cssY = e.clientY - rect.top;
                 const pageNum = parseInt(canvas.dataset.pageNum);
 
+                // Convert CSS click → normalized 0-1 coords
                 manualPosition = {
                     page: pageNum,
-                    x: x * scaleX,
-                    y: y * scaleY,
+                    x_norm: cssX / rect.width,
+                    y_norm: cssY / rect.height,
                 };
 
-                showStampMarkerOnCanvas(canvas, x, y);
+                showMarkerByNorm(pageNum, manualPosition.x_norm, manualPosition.y_norm);
                 showStatus('success', `已指定盖章位置: 第 ${pageNum + 1} 页`);
                 previewWarning.classList.remove('visible');
                 checkReady();
@@ -416,26 +408,17 @@
         });
     }
 
-    function showStampMarkerOnPage(pageNum, pdfX, pdfY) {
+    function showMarkerByNorm(pageNum, xNorm, yNorm) {
         const canvas = pagesContainer.querySelector(`canvas[data-page-num="${pageNum}"]`);
         if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
         const scrollRect = previewScroll.getBoundingClientRect();
-        const scaleX = rect.width / canvas.width;
-        const scaleY = rect.height / canvas.height;
-        const cx = pdfX * scaleX;
-        const cy = pdfY * scaleY;
+        // Normalized → CSS pixels on page
+        const cx = xNorm * rect.width;
+        const cy = yNorm * rect.height;
         stampMarker.hidden = false;
         stampMarker.style.left = (rect.left - scrollRect.left + previewScroll.scrollLeft + cx - 40) + 'px';
         stampMarker.style.top = (rect.top - scrollRect.top + previewScroll.scrollTop + cy - 40) + 'px';
-    }
-
-    function showStampMarkerOnCanvas(canvas, displayX, displayY) {
-        const rect = canvas.getBoundingClientRect();
-        const scrollRect = previewScroll.getBoundingClientRect();
-        stampMarker.hidden = false;
-        stampMarker.style.left = (rect.left - scrollRect.left + previewScroll.scrollLeft + displayX - 40) + 'px';
-        stampMarker.style.top = (rect.top - scrollRect.top + previewScroll.scrollTop + displayY - 40) + 'px';
     }
 
     // ── Draggable stamp marker ──
@@ -491,14 +474,14 @@
                 markerCy >= relTop && markerCy <= relTop + rect.height) {
                 const cx = markerCx - relLeft;
                 const cy = markerCy - relTop;
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
                 const pageNum = parseInt(canvas.dataset.pageNum);
+                // Store as normalized coords
+                const newPos = { page: pageNum, x_norm: cx / rect.width, y_norm: cy / rect.height };
                 if (detectedPosition && detectedPosition.page === pageNum) {
-                    detectedPosition.x = cx * scaleX;
-                    detectedPosition.y = cy * scaleY;
+                    detectedPosition.x_norm = newPos.x_norm;
+                    detectedPosition.y_norm = newPos.y_norm;
                 } else {
-                    manualPosition = { page: pageNum, x: cx * scaleX, y: cy * scaleY };
+                    manualPosition = newPos;
                 }
                 break;
             }
@@ -545,15 +528,16 @@
         let pdfX, pdfY;
 
         if (pdfDoc && !isWordUpload) {
+            // Normalized coords → PDF points
             const page = await pdfDoc.getPage(pos.page + 1);
             const viewport = page.getViewport({ scale: 1 });
-            const canvas = pagesContainer.querySelector(`canvas[data-page-num="${pos.page}"]`);
-            const displayScale = canvas ? canvas.width / viewport.width : 1;
-            pdfX = pos.x / displayScale;
-            pdfY = pos.y / displayScale;
+            pdfX = pos.x_norm * viewport.width;
+            pdfY = pos.y_norm * viewport.height;
         } else {
-            pdfX = pos.x;
-            pdfY = pos.y;
+            // Word upload: use page dimensions from preview
+            const canvas = pagesContainer.querySelector(`canvas[data-page-num="${pos.page}"]`);
+            pdfX = pos.x_norm * 595.276;  // A4 width in points
+            pdfY = pos.y_norm * 841.89;   // A4 height in points
         }
 
         const body = {
