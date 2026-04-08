@@ -35,7 +35,7 @@ def slice_stamp(stamp_path: str, num_pages: int, stamp_aging: int = 30) -> list[
 
 
 def place_seam_stamps(pdf_path: str, stamp_path: str, stamp_aging: int = 30,
-                      position: str = "random") -> str:
+                      position: str = "top") -> str:
     doc = fitz.open(pdf_path)
     num_pages = len(doc)
     strips = slice_stamp(stamp_path, num_pages, stamp_aging)
@@ -48,7 +48,8 @@ def place_seam_stamps(pdf_path: str, stamp_path: str, stamp_aging: int = 30,
     usable_bottom = page_h - margin - target_h / 2
 
     if position == "top":
-        seam_center_y = usable_top + (usable_bottom - usable_top) * random.uniform(0.05, 0.25)
+        # ~15-25% of page height
+        seam_center_y = page_h * random.uniform(0.15, 0.25)
     elif position == "center":
         seam_center_y = page_h / 2 + random.uniform(-20, 20)
     elif position == "bottom":
