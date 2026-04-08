@@ -11,14 +11,13 @@ from app.core.stamp_placer import _age_stamp
 MAX_STAMP_PX = 500  # Max stamp dimension before slicing
 
 
-def slice_stamp(stamp_path: str, num_pages: int) -> list[str]:
+def slice_stamp(stamp_path: str, num_pages: int, stamp_aging: int = 30) -> list[str]:
     img = Image.open(stamp_path).convert("RGBA")
     w, h = img.size
     if max(w, h) > MAX_STAMP_PX:
         scale = MAX_STAMP_PX / max(w, h)
         img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
-    # Apply aging to the whole stamp before slicing (consistent look)
-    img = _age_stamp(img)
+    img = _age_stamp(img, stamp_aging)
     width, height = img.size
     strip_width = width // num_pages
     strips = []
@@ -35,10 +34,10 @@ def slice_stamp(stamp_path: str, num_pages: int) -> list[str]:
     return strips
 
 
-def place_seam_stamps(pdf_path: str, stamp_path: str) -> str:
+def place_seam_stamps(pdf_path: str, stamp_path: str, stamp_aging: int = 30) -> str:
     doc = fitz.open(pdf_path)
     num_pages = len(doc)
-    strips = slice_stamp(stamp_path, num_pages)
+    strips = slice_stamp(stamp_path, num_pages, stamp_aging)
     # Get the actual downscaled stamp height from the first strip (before rotation padding)
     # Target: stamp displays at 120pt (≈42mm) high in PDF
     target_h = 120.0

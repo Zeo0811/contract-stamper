@@ -204,86 +204,102 @@ def detect_keywords(pdf_path: str, party: str = "乙方") -> list[dict]:
 MAX_STAMP_PX = 500  # Max stamp dimension in pixels
 
 
-def _age_stamp(img: Image.Image) -> Image.Image:
-    """Make a stamp image look like a heavily used, scanned seal impression.
+def _age_stamp(img: Image.Image, intensity: int = 30) -> Image.Image:
+    """Make a stamp look like a real physical seal impression.
 
-    Simulates: strong ink fade, uneven pressure, blur, noise, micro-rotation.
+    intensity: 0 (no effect) to 100 (heavy aging).  Default 30 = subtle.
     Input must be RGBA.
     """
+    if intensity <= 0:
+        return img
+
+    t = max(0.0, min(1.0, intensity / 100.0))  # 0.0 – 1.0
     w, h = img.size
 
-    # ── 1. Heavy desaturation: washed-out ink look ──
+    # ── 1. Desaturation ──
     rgb = img.convert("RGB")
+    # t=0 → 1.0 (no change), t=1 → 0.30
+    sat = 1.0 - t * 0.70
     enhancer = ImageEnhance.Color(rgb)
-    rgb = enhancer.enhance(random.uniform(0.30, 0.50))  # 30-50% saturation
+    rgb = enhancer.enhance(sat + random.uniform(-0.05, 0.05))
 
-    # ── 2. Brightness boost to wash out the color (lighter = more faded) ──
+    # ── 2. Brightness boost (fade) ──
+    # t=0 → 1.0, t=1 → 1.30
+    brt = 1.0 + t * 0.30
     enhancer = ImageEnhance.Brightness(rgb)
-    rgb = enhancer.enhance(random.uniform(1.10, 1.30))
+    rgb = enhancer.enhance(brt + random.uniform(-0.03, 0.03))
 
-    # ── 3. Lower contrast for that flat scanned look ──
+    # ── 3. Contrast reduction ──
+    # t=0 → 1.0, t=1 → 0.60
+    con = 1.0 - t * 0.40
     enhancer = ImageEnhance.Contrast(rgb)
-    rgb = enhancer.enhance(random.uniform(0.60, 0.80))
+    rgb = enhancer.enhance(con + random.uniform(-0.03, 0.03))
 
-    # Merge back with original alpha
     img = Image.merge("RGBA", (*rgb.split(), img.split()[3]))
 
-    # ── 4. Aggressive uneven ink distribution (pressure map) ──
+    # ── 4. Uneven ink pressure ──
     arr = np.array(img, dtype=np.float32)
     alpha = arr[:, :, 3]
     small_h, small_w = max(4, h // 30), max(4, w // 30)
-    pressure = np.random.uniform(0.35, 1.0, (small_h, small_w)).astype(np.float32)
+    # t=0 → range [0.95,1], t=1 → range [0.35,1]
+    lo = 1.0 - t * 0.65
+    pressure = np.random.uniform(lo, 1.0, (small_h, small_w)).astype(np.float32)
     pressure_img = Image.fromarray((pressure * 255).astype(np.uint8), mode="L")
     pressure_map = np.array(
         pressure_img.resize((w, h), Image.BILINEAR), dtype=np.float32
     ) / 255.0
     alpha = alpha * pressure_map
-    # Overall transparency reduction
-    alpha = alpha * random.uniform(0.55, 0.75)
-    arr[:, :, 3] = alpha
+    # Overall transparency: t=0 → 1.0, t=1 → 0.55
+    alpha = alpha * (1.0 - t * 0.45 + random.uniform(-0.03, 0.03))
+    arr[:, :, 3] = np.clip(alpha, 0, 255)
     img = Image.fromarray(arr.astype(np.uint8), "RGBA")
 
-    # ── 5. Stronger Gaussian blur (ink bleed on paper) ──
-    blur_r = random.uniform(0.7, 1.3)
+    # ── 5. Gaussian blur ──
+    # t=0 → 0.1, t=1 → 1.3
+    blur_r = 0.1 + t * 1.2
     img = img.filter(ImageFilter.GaussianBlur(radius=blur_r))
 
-    # ── 6. Heavier noise on stamp pixels ──
-    arr = np.array(img, dtype=np.float32)
-    mask = arr[:, :, 3] > 10
-    noise = np.random.normal(0, 8, (h, w, 3))
-    for c in range(3):
-        channel = arr[:, :, c]
-        channel[mask] = np.clip(channel[mask] + noise[:, :, c][mask], 0, 255)
-        arr[:, :, c] = channel
-    img = Image.fromarray(arr.astype(np.uint8), "RGBA")
+    # ── 6. Noise ──
+    if t > 0.1:
+        arr = np.array(img, dtype=np.float32)
+        mask = arr[:, :, 3] > 10
+        sigma = t * 8
+        noise = np.random.normal(0, sigma, (h, w, 3))
+        for c in range(3):
+            ch = arr[:, :, c]
+            ch[mask] = np.clip(ch[mask] + noise[:, :, c][mask], 0, 255)
+            arr[:, :, c] = ch
+        img = Image.fromarray(arr.astype(np.uint8), "RGBA")
 
-    # ── 7. Micro-rotation (hand shake) ──
-    angle = random.uniform(-2.5, 2.5)
-    img = img.rotate(angle, expand=True, fillcolor=(0, 0, 0, 0))
+    # ── 7. Micro-rotation ──
+    angle = random.uniform(-t * 2.5, t * 2.5)
+    if abs(angle) > 0.2:
+        img = img.rotate(angle, expand=True, fillcolor=(0, 0, 0, 0))
 
     return img
 
 
-def _prepare_stamp(stamp_path: str) -> bytes:
+def _prepare_stamp(stamp_path: str, intensity: int = 30) -> bytes:
     """Load, downscale, age, and return stamp as PNG bytes."""
     img = Image.open(stamp_path).convert("RGBA")
     w, h = img.size
     if max(w, h) > MAX_STAMP_PX:
         scale = MAX_STAMP_PX / max(w, h)
         img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
-    img = _age_stamp(img)
+    img = _age_stamp(img, intensity)
     buf = io.BytesIO()
     img.save(buf, "PNG")
     return buf.getvalue()
 
 
-def place_stamp(pdf_path: str, stamp_path: str, page_num: int, x: float, y: float, size_mm: float = 42.0) -> str:
+def place_stamp(pdf_path: str, stamp_path: str, page_num: int, x: float, y: float,
+                size_mm: float = 42.0, stamp_aging: int = 30) -> str:
     doc = fitz.open(pdf_path)
     page = doc[page_num]
     size_pt = size_mm * 2.835
     half = size_pt / 2
     stamp_rect = fitz.Rect(x - half, y - half, x + half, y + half)
-    stamp_bytes = _prepare_stamp(stamp_path)
+    stamp_bytes = _prepare_stamp(stamp_path, stamp_aging)
     page.insert_image(stamp_rect, stream=stamp_bytes, overlay=True)
     fd, output_path = tempfile.mkstemp(suffix=".pdf")
     os.close(fd)
