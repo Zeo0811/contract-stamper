@@ -78,18 +78,15 @@ def _clean_party_name(raw: str) -> str:
 
 
 def extract_party_names(pdf_path: str) -> dict:
-    """Extract 甲方/乙方 company names from a PDF.
+    """Extract 甲方/乙方 company names from the beginning of a PDF.
 
-    Scans first 3 + last 2 pages. Handles multiple formats:
-      甲方：上海XX公司            (colon separator)
-      甲方（全称）：XX公司         (with label in parens)
-      乙方（盖章），XX公司         (comma after seal, common in OCR)
+    Scans only the first 2 pages — contract headers always list party
+    names near the top.  Falls back to OCR for scanned documents.
     Returns {"party_a": "...", "party_b": "..."} with empty string if not found.
     """
     doc = fitz.open(pdf_path)
     full_text = ""
-    pages_to_scan = list(range(min(3, len(doc)))) + list(range(max(0, len(doc) - 2), len(doc)))
-    for i in sorted(set(pages_to_scan)):
+    for i in range(min(2, len(doc))):
         page_text = doc[i].get_text()
         if len(page_text.strip()) < 30 and HAS_TESSERACT:
             words = _ocr_page(doc[i])
