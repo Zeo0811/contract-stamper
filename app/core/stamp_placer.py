@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import random
 import tempfile
 import fitz
@@ -63,6 +64,49 @@ def _normalize_text(text: str) -> str:
     for old, new in replacements.items():
         text = text.replace(old, new)
     return text
+
+
+def extract_party_names(pdf_path: str) -> dict:
+    """Extract 甲方/乙方 company names from the first few pages of a PDF.
+
+    Looks for patterns like:
+      甲方：上海XX有限公司
+      甲方（全称）：XX公司
+      乙方：
+    Returns {"party_a": "...", "party_b": "..."} with empty string if not found.
+    """
+    doc = fitz.open(pdf_path)
+    full_text = ""
+    # Scan first 3 pages and last 2 pages (contract headers and signature blocks)
+    pages_to_scan = list(range(min(3, len(doc)))) + list(range(max(0, len(doc) - 2), len(doc)))
+    for i in sorted(set(pages_to_scan)):
+        page_text = doc[i].get_text()
+        if len(page_text.strip()) < 30 and HAS_TESSERACT:
+            words = _ocr_page(doc[i])
+            page_text = "".join(w["text"] for w in words)
+        full_text += page_text + "\n"
+    doc.close()
+
+    norm = _normalize_text(full_text)
+    result = {"party_a": "", "party_b": ""}
+
+    for party, key in [("甲方", "party_a"), ("乙方", "party_b")]:
+        # Match: 甲方：XXX公司 or 甲方(全称)：XXX公司
+        # Stop at common delimiters: newline, 乙方, 甲方, （, 授权
+        patterns = [
+            rf'{party}[（(][^)）]*[)）]?\s*[：:]\s*([^\n（(甲乙]{2,40})',
+            rf'{party}\s*[：:]\s*([^\n（(甲乙]{2,40})',
+        ]
+        for pat in patterns:
+            m = re.search(pat, norm)
+            if m:
+                name = m.group(1).strip().rstrip("，。,.")
+                # Filter out obviously wrong matches (too short, or generic text)
+                if len(name) >= 4 and "权利" not in name and "义务" not in name:
+                    result[key] = name
+                    break
+
+    return result
 
 
 def _ocr_page(page, dpi: int = 300) -> list[dict]:

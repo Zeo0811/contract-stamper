@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from app.auth import verify_auth, validate_id
 from app.config import UPLOAD_DIR
-from app.core.stamp_placer import place_stamp
+from app.core.stamp_placer import place_stamp, extract_party_names
 from app.core.seam_stamp import place_seam_stamps
 from app.core.scan_effect import scan_params_from_slider, apply_scan_to_image
 import fitz
@@ -43,6 +43,15 @@ def _process_stamp(task_id: str, req: StampRequest):
         tasks[task_id]["created_at"] = time.time()
         tasks[task_id]["status"] = "processing"
         pdf_path = os.path.join(UPLOAD_DIR, "uploads", f"{req.file_id}.pdf")
+
+        # Extract party names for email subject
+        try:
+            parties = extract_party_names(pdf_path)
+            tasks[task_id]["party_a"] = parties.get("party_a", "")
+            tasks[task_id]["party_b"] = parties.get("party_b", "")
+        except Exception:
+            tasks[task_id]["party_a"] = ""
+            tasks[task_id]["party_b"] = ""
         stamp_path = os.path.join(UPLOAD_DIR, "stamps", f"{req.stamp_id}.png")
         current_pdf = pdf_path
 
