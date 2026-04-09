@@ -104,9 +104,12 @@ async def send_email(
     with open(result_path, "rb") as f:
         pdf_b64 = base64.b64encode(f.read()).decode()
 
+    # MAIL_TO supports comma-separated recipients: "a@x.com,b@x.com"
+    recipients = [e.strip() for e in MAIL_TO.split(",") if e.strip()]
+
     payload = {
         "from": MAIL_FROM,
-        "to": [MAIL_TO],
+        "to": recipients,
         "subject": subject,
         "text": f"{filename} 已完成盖章，请查收附件。",
         "attachments": [
@@ -134,4 +137,4 @@ async def send_email(
         raise HTTPException(status_code=500, detail=f"发送失败: {str(e)}")
 
     logger.info("Email sent successfully via Resend")
-    return {"ok": True, "to": MAIL_TO}
+    return {"ok": True, "to": ", ".join(recipients)}
