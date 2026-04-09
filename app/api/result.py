@@ -1,6 +1,7 @@
 import os
 import smtplib
 import asyncio
+import logging
 from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
@@ -11,6 +12,8 @@ from pydantic import BaseModel
 from app.auth import verify_auth, validate_id
 from app.api.stamp import tasks
 from app.config import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, MAIL_TO
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1")
 
@@ -77,6 +80,9 @@ def _build_subject(party_a: str, party_b: str) -> str:
 
 def _send_email(to: str, pdf_path: str, filename: str, subject: str):
     """Send stamped PDF as email attachment via Gmail SMTP."""
+    # Gmail app passwords may be displayed with spaces — strip them
+    password = SMTP_PASSWORD.replace(" ", "")
+
     msg = MIMEMultipart()
     msg["Subject"] = subject
     msg["From"] = SMTP_USER
@@ -88,9 +94,11 @@ def _send_email(to: str, pdf_path: str, filename: str, subject: str):
         att["Content-Disposition"] = f'attachment; filename="{filename}"'
         msg.attach(att)
 
+    logger.info(f"Sending email to {to}, subject: {subject}")
     with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as s:
-        s.login(SMTP_USER, SMTP_PASSWORD)
+        s.login(SMTP_USER, password)
         s.send_message(msg)
+    logger.info("Email sent successfully")
 
 
 class SendEmailRequest(BaseModel):
@@ -122,6 +130,7 @@ async def send_email(
     try:
         await asyncio.to_thread(_send_email, MAIL_TO, result_path, filename, subject)
     except Exception as e:
+        logger.error(f"Email send failed: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=f"发送失败: {str(e)}")
 
     return {"ok": True, "to": MAIL_TO}
