@@ -80,8 +80,8 @@ def _build_subject(party_a: str, party_b: str) -> str:
 
 def _send_email(to: str, pdf_path: str, filename: str, subject: str):
     """Send stamped PDF as email attachment via Gmail SMTP."""
-    # Gmail app passwords may be displayed with spaces — strip them
-    password = SMTP_PASSWORD.replace(" ", "")
+    # Gmail app passwords work both with and without spaces
+    password = SMTP_PASSWORD.strip()
 
     msg = MIMEMultipart()
     msg["Subject"] = subject
@@ -94,10 +94,20 @@ def _send_email(to: str, pdf_path: str, filename: str, subject: str):
         att["Content-Disposition"] = f'attachment; filename="{filename}"'
         msg.attach(att)
 
-    logger.info(f"Sending email to {to}, subject: {subject}")
-    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as s:
-        s.login(SMTP_USER, password)
-        s.send_message(msg)
+    logger.info(f"Sending email: from={SMTP_USER} to={to} host={SMTP_HOST}:{SMTP_PORT}")
+
+    # Try SSL first (port 465), then STARTTLS (port 587) as fallback
+    try:
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as s:
+            s.login(SMTP_USER, password)
+            s.send_message(msg)
+    except Exception as ssl_err:
+        logger.warning(f"SMTP_SSL failed: {ssl_err}, trying STARTTLS on 587")
+        with smtplib.SMTP(SMTP_HOST, 587, timeout=15) as s:
+            s.starttls()
+            s.login(SMTP_USER, password)
+            s.send_message(msg)
+
     logger.info("Email sent successfully")
 
 
@@ -134,3 +144,26 @@ async def send_email(
         raise HTTPException(status_code=500, detail=f"发送失败: {str(e)}")
 
     return {"ok": True, "to": MAIL_TO}
+
+
+@router.get("/email-check")
+async def email_check(_: str = Depends(verify_auth)):
+    """Diagnostic: check email configuration without sending."""
+    configured = bool(SMTP_USER and SMTP_PASSWORD and MAIL_TO)
+    result = {
+        "configured": configured,
+        "smtp_host": SMTP_HOST,
+        "smtp_port": SMTP_PORT,
+        "smtp_user": SMTP_USER[:3] + "***" if SMTP_USER else "",
+        "mail_to": MAIL_TO[:3] + "***" if MAIL_TO else "",
+        "password_set": bool(SMTP_PASSWORD),
+        "password_len": len(SMTP_PASSWORD) if SMTP_PASSWORD else 0,
+    }
+    if configured:
+        try:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as s:
+                s.login(SMTP_USER, SMTP_PASSWORD.strip())
+                result["smtp_login"] = "ok"
+        except Exception as e:
+            result["smtp_login"] = f"failed: {type(e).__name__}: {e}"
+    return result
