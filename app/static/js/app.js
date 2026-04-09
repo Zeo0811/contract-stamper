@@ -41,6 +41,8 @@
     const processBtnText = document.getElementById('processBtnText');
     const btnProgress = document.getElementById('btnProgress');
     const newTaskBtn = document.getElementById('newTaskBtn');
+    const sendEmailBtn = document.getElementById('sendEmailBtn');
+    const sendEmailText = document.getElementById('sendEmailText');
     const statusBar = document.getElementById('statusBar');
     const statusText = document.getElementById('statusText');
 
@@ -297,6 +299,7 @@
         previewTitle.textContent = '合同预览';
         stampMarker.hidden = true;
         newTaskBtn.hidden = true;
+        sendEmailBtn.hidden = true;
         btnProgress.style.width = '0';
         processBtn.classList.remove('download');
         processBtnText.textContent = '开始处理';
@@ -312,6 +315,37 @@
 
     newTaskBtn.addEventListener('click', () => {
         resetContractState();
+    });
+
+    sendEmailBtn.addEventListener('click', async () => {
+        if (!resultTaskId) return;
+        sendEmailBtn.disabled = true;
+        sendEmailText.textContent = '发送中...';
+        try {
+            const resp = await api('POST', '/api/v1/send-email', { task_id: resultTaskId });
+            if (resp.ok) {
+                const data = await resp.json();
+                sendEmailText.textContent = '已发送 ✓';
+                sendEmailBtn.classList.add('sent');
+                showStatus('success', `已发送至 ${data.to}`);
+                hideStatus();
+            } else {
+                const err = await resp.json();
+                sendEmailText.textContent = '发送失败';
+                showStatus('error', err.detail || '发送失败');
+                setTimeout(() => {
+                    sendEmailBtn.disabled = false;
+                    sendEmailText.textContent = '发送到邮箱';
+                }, 3000);
+            }
+        } catch (e) {
+            sendEmailText.textContent = '发送失败';
+            showStatus('error', '网络错误');
+            setTimeout(() => {
+                sendEmailBtn.disabled = false;
+                sendEmailText.textContent = '发送到邮箱';
+            }, 3000);
+        }
     });
 
     // ── Preset Stamps ──
@@ -644,6 +678,10 @@
             processBtnText.textContent = '下载结果 PDF';
             document.getElementById('processBtnIcon').innerHTML = '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>';
             newTaskBtn.hidden = false;
+            sendEmailBtn.hidden = false;
+            sendEmailBtn.disabled = false;
+            sendEmailBtn.classList.remove('sent');
+            sendEmailText.textContent = '发送到邮箱';
 
             await previewResultPdf(taskId);
             addHistory(lastFileName, taskId);

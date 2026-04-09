@@ -737,6 +737,38 @@ body {
     transform: rotate(180deg) scale(0.92);
 }
 
+.btn-email {
+    width: 100%;
+    padding: 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--text-2);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--font);
+    transition: all var(--dur) var(--ease);
+}
+.btn-email:hover {
+    background: var(--info-lt);
+    color: var(--info);
+    border-color: var(--info);
+}
+.btn-email:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+.btn-email.sent {
+    background: var(--primary-lt);
+    color: var(--primary);
+    border-color: var(--primary-bd);
+}
+
 /* ══════════════════════════════════════════
    STATUS BAR
    ══════════════════════════════════════════ */
