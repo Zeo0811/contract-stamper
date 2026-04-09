@@ -10,13 +10,13 @@ An automated contract stamping tool that uploads PDF/Word/Excel contracts, auto-
 - **Riding Seam Stamps** — Slices the seal across all pages along the right edge, with configurable vertical position (random / top / center / bottom) and per-page jitter for a natural look.
 - **Stamp Aging Effect** — Adjustable intensity (0–100) simulating real stamp impressions: ink fade via transparency, mild desaturation, uneven pressure map, Gaussian blur, noise, and random rotation (±3° to ±10°). Red color is preserved even at high intensity.
 - **Scan Effect Simulation** — Adjustable intensity with a 7-layer pipeline: brightness shift, sensor noise, page tilt, text softening, non-uniform brightness, edge shadows, and four-corner darkening.
-- **Instant Stamp Selection** — All stamps are pre-uploaded in the background when the page loads. Clicking a stamp is instant with no loading delay.
+- **Email Delivery** — Send stamped PDF to configured recipients via Resend API. Auto-extracts party names from the contract for the email subject: 【合同 日期 甲方&乙方】. Supports multiple recipients.
+- **Instant Stamp Selection** — All stamps are pre-uploaded sequentially in the background. Clicking a stamp is instant with no loading delay.
 - **Normalized Coordinates** — Seal positions use 0–1 normalized coordinates, ensuring correct marker placement regardless of browser window size.
 - **Excel Support** — Excel files are converted to PDF, with seam stamps auto-disabled and manual stamp placement via click.
 - **Admin Dashboard** — User management (create/delete, role control) and stamp management (upload seal PNGs with company names, image preview, upload progress indicator).
 - **Cache-Busting** — Static files include a deploy timestamp query parameter, ensuring browsers load fresh JS/CSS after every deployment.
 - **Processing History** — View past stamping operations with re-download support.
-- **Completion Animation** — Fireworks celebration on successful processing.
 - **RESTful API** — Full programmatic access; supports MCP/Skill integration.
 - **Multi-User Auth** — Session token + Bearer API key with role-based access control.
 
@@ -28,6 +28,7 @@ An automated contract stamping tool that uploads PDF/Word/Excel contracts, auto-
 | **Frontend** | Vanilla HTML/CSS/JS, PDF.js |
 | **OCR** | Tesseract (chi_sim + chi_tra + eng) |
 | **Document Conversion** | LibreOffice (headless) — Writer + Calc |
+| **Email** | Resend (HTTP API) |
 | **Deployment** | Docker, Railway |
 
 ## Quick Start
@@ -87,6 +88,9 @@ docker run -p 8000:8000 \
 | `UPLOAD_DIR` | `/tmp/contract-stamper` | Temporary file storage directory |
 | `DATA_DIR` | `./data` | Persistent data storage (users, stamp metadata) |
 | `FILE_TTL_SECONDS` | `3600` | Auto-cleanup interval for uploaded/result files (seconds) |
+| `RESEND_API_KEY` | - | Resend API key for email delivery |
+| `MAIL_FROM` | `onboarding@resend.dev` | Sender email address (must be verified domain on Resend) |
+| `MAIL_TO` | - | Recipient email(s), comma-separated for multiple |
 
 ## Project Structure
 
@@ -143,6 +147,7 @@ Full API documentation is available in **[API.md](API.md)**.
 | `POST` | `/stamp` | Start async stamping, returns `task_id` |
 | `GET` | `/result/{task_id}` | Poll task status and progress (0–100%) |
 | `GET` | `/download/{task_id}` | Download the stamped PDF result |
+| `POST` | `/send-email` | Send stamped PDF to configured recipients via email |
 | `POST` | `/login` | User authentication, returns session token |
 | `GET` | `/me` | Get current user info |
 | `GET` | `/health` | Health check (no auth required) |
@@ -150,7 +155,7 @@ Full API documentation is available in **[API.md](API.md)**.
 ### Typical Workflow
 
 ```
-Upload contract → Upload/select stamp → Detect position → Execute stamping → Poll status → Download result
+Upload contract → Upload/select stamp → Detect position → Execute stamping → Poll status → Download result → (Optional) Send email
 ```
 
 ## Stamp Aging Effect
@@ -177,7 +182,42 @@ The `scan_effect` parameter (0–100) controls simulated scan quality:
 | **40–79** | Medium | Balanced: visible noise, moderate tilt, DPI 150–200 |
 | **1–39** | Heavy | Low quality: heavy noise, strong tilt, dark corners, DPI 120–150 |
 
+## Email Delivery
+
+After stamping completes, the result PDF can be sent to configured recipients via the Resend API.
+
+**Setup:**
+1. Register at [resend.com](https://resend.com) and get an API key
+2. Verify your sending domain at resend.com/domains (add DNS records)
+3. Set environment variables: `RESEND_API_KEY`, `MAIL_FROM`, `MAIL_TO`
+
+**Email subject format:** `【合同 20260409 甲方公司名&乙方公司名】`
+- Party names are auto-extracted from the contract text (first 3 + last 2 pages)
+- Falls back to `【合同 日期】` if names cannot be extracted
+
+**API usage:**
+```bash
+curl -X POST "$API/api/v1/send-email" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{"task_id": "b3c4d5e6f7a8"}'
+```
+
+**Multiple recipients:** Set `MAIL_TO=a@example.com,b@example.com` (comma-separated).
+
 ## Changelog
+
+### v1.2.0 (2026-04-09)
+
+**Email Delivery**
+- Send stamped PDF to recipients via Resend HTTP API (SMTP blocked on Railway)
+- Auto-extract party names for email subject: 【合同 日期 甲方&乙方】
+- Multiple recipients via comma-separated `MAIL_TO`
+- "发送到邮箱" button appears after processing completes
+
+**Bug Fixes**
+- Fireworks animation no longer blocks download button clicks (`pointer-events: none`)
+- Sequential stamp preloading prevents server overload
+- Reverted multi-worker (breaks in-memory task state)
 
 ### v1.1.0 (2026-04-08)
 
