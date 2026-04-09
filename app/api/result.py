@@ -1,6 +1,7 @@
 import os
 import smtplib
 import asyncio
+from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from email.mime.text import MIMEText
@@ -60,10 +61,24 @@ async def download(
     )
 
 
-def _send_email(to: str, pdf_path: str, filename: str):
+def _build_subject(party_a: str, party_b: str) -> str:
+    """Build email subject: 【合同+日期+甲方乙方主体名称】"""
+    today = date.today().strftime("%Y%m%d")
+    parts = ["合同", today]
+    names = []
+    if party_a:
+        names.append(party_a)
+    if party_b:
+        names.append(party_b)
+    if names:
+        parts.append("&".join(names))
+    return "【" + " ".join(parts) + "】"
+
+
+def _send_email(to: str, pdf_path: str, filename: str, subject: str):
     """Send stamped PDF as email attachment via Gmail SMTP."""
     msg = MIMEMultipart()
-    msg["Subject"] = f"盖章完成: {filename}"
+    msg["Subject"] = subject
     msg["From"] = SMTP_USER
     msg["To"] = to
     msg.attach(MIMEText(f"{filename} 已完成盖章，请查收附件。", "plain", "utf-8"))
@@ -102,9 +117,10 @@ async def send_email(
 
     original = task.get("original_filename", "")
     filename = f"{os.path.splitext(original)[0]}.pdf" if original else f"stamped_{req.task_id}.pdf"
+    subject = _build_subject(task.get("party_a", ""), task.get("party_b", ""))
 
     try:
-        await asyncio.to_thread(_send_email, MAIL_TO, result_path, filename)
+        await asyncio.to_thread(_send_email, MAIL_TO, result_path, filename, subject)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"发送失败: {str(e)}")
 
