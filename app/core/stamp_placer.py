@@ -66,18 +66,28 @@ def _normalize_text(text: str) -> str:
     return text
 
 
-def extract_party_names(pdf_path: str) -> dict:
-    """Extract 甲方/乙方 company names from the first few pages of a PDF.
+def _clean_party_name(raw: str) -> str:
+    """Clean extracted party name — truncate at known stop words."""
+    # Cut at common suffixes that aren't part of the company name
+    for stop in ["法定", "授权", "代表", "签字", "签章", "日期", "地址", "电话",
+                 "负责人", "联系", "统一社会", "住所", "开户"]:
+        idx = raw.find(stop)
+        if idx > 0:
+            raw = raw[:idx]
+    return re.sub(r'[，。,.\s：:；;）)]+$', '', raw).strip()
 
-    Looks for patterns like:
-      甲方：上海XX有限公司
-      甲方（全称）：XX公司
-      乙方：
+
+def extract_party_names(pdf_path: str) -> dict:
+    """Extract 甲方/乙方 company names from a PDF.
+
+    Scans first 3 + last 2 pages. Handles multiple formats:
+      甲方：上海XX公司            (colon separator)
+      甲方（全称）：XX公司         (with label in parens)
+      乙方（盖章），XX公司         (comma after seal, common in OCR)
     Returns {"party_a": "...", "party_b": "..."} with empty string if not found.
     """
     doc = fitz.open(pdf_path)
     full_text = ""
-    # Scan first 3 pages and last 2 pages (contract headers and signature blocks)
     pages_to_scan = list(range(min(3, len(doc)))) + list(range(max(0, len(doc) - 2), len(doc)))
     for i in sorted(set(pages_to_scan)):
         page_text = doc[i].get_text()
@@ -91,18 +101,20 @@ def extract_party_names(pdf_path: str) -> dict:
     result = {"party_a": "", "party_b": ""}
 
     for party, key in [("甲方", "party_a"), ("乙方", "party_b")]:
-        # Match: 甲方：XXX公司 or 甲方(全称)：XXX公司
-        # Stop at common delimiters: newline, 乙方, 甲方, （, 授权
+        # Greedy match: grab everything after the label up to 50 chars
         patterns = [
-            rf'{party}[（(][^)）]*[)）]?\s*[：:]\s*([^\n（(甲乙]{2,40})',
-            rf'{party}\s*[：:]\s*([^\n（(甲乙]{2,40})',
+            # 甲方（全称）：公司名...
+            rf'{party}\s*[（(][^)）]*[)）]\s*[：:]\s*([^\n]{{4,50}})',
+            # 甲方：公司名...
+            rf'{party}\s*[：:]\s*([^\n]{{4,50}})',
+            # 甲方（盖章），公司名...  or  甲方（盖章）公司名...
+            rf'{party}\s*[（(][^)）]*[)）][，,\s]*([^\n]{{4,50}})',
         ]
         for pat in patterns:
             m = re.search(pat, norm)
             if m:
-                name = m.group(1).strip().rstrip("，。,.")
-                # Filter out obviously wrong matches (too short, or generic text)
-                if len(name) >= 4 and "权利" not in name and "义务" not in name:
+                name = _clean_party_name(m.group(1))
+                if len(name) >= 4 and not any(w in name for w in ["权利", "义务", "约定", "应当", "双方"]):
                     result[key] = name
                     break
 
