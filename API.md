@@ -26,6 +26,7 @@ A typical stamping workflow follows these steps:
 5. Execute stamping   POST /api/v1/stamp
 6. Poll status        GET  /api/v1/result/{task_id}
 7. Download result    GET  /api/v1/download/{task_id}
+8. Send email         POST /api/v1/send-email  (optional)
 ```
 
 ---
@@ -49,7 +50,7 @@ No authentication required.
 
 ### Upload Contract
 
-Upload a PDF or Word (.docx/.doc) contract file. Word files are automatically converted to PDF (tracked changes are accepted).
+Upload a PDF, Word (.docx/.doc), or Excel (.xlsx/.xls) contract file. Word and Excel files are automatically converted to PDF.
 
 ```
 POST /api/v1/upload
@@ -59,7 +60,7 @@ Content-Type: multipart/form-data
 **Request:**
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `file` | File | Yes | PDF, DOCX, or DOC file |
+| `file` | File | Yes | PDF, DOCX, DOC, XLSX, or XLS file |
 
 **Response:**
 ```json
@@ -70,7 +71,8 @@ Content-Type: multipart/form-data
     "/api/v1/preview/a1b2c3d4e5f6_0.png",
     "/api/v1/preview/a1b2c3d4e5f6_1.png"
   ],
-  "converted_from": ".docx"
+  "converted_from": ".docx",
+  "is_excel": false
 }
 ```
 
@@ -80,6 +82,7 @@ Content-Type: multipart/form-data
 | `page_count` | integer | Total number of pages in the PDF |
 | `previews` | string[] | URLs for page preview images |
 | `converted_from` | string\|null | Original extension if converted, null if PDF |
+| `is_excel` | boolean | Whether the original file was Excel |
 
 **Example:**
 ```bash
@@ -222,7 +225,9 @@ Content-Type: application/json
     "y": 642.3
   },
   "riding_seam": true,
+  "seam_position": "top",
   "scan_effect": 50,
+  "stamp_aging": 70,
   "original_filename": "合同.docx"
 }
 ```
@@ -236,7 +241,9 @@ Content-Type: application/json
 | `party_b_position.x` | float | Yes | - | X coordinate in PDF points |
 | `party_b_position.y` | float | Yes | - | Y coordinate in PDF points |
 | `riding_seam` | boolean | No | true | Whether to add riding seam stamps across all pages |
+| `seam_position` | string | No | `"top"` | Seam stamp vertical position: `"random"`, `"top"`, `"center"`, `"bottom"` |
 | `scan_effect` | integer | No | 50 | Scan quality slider (0=no effect, 1-39=heavy, 40-79=medium, 80-100=light) |
+| `stamp_aging` | integer | No | 70 | Stamp aging intensity (0=off, 1-100). Controls fade, blur, noise, rotation |
 | `original_filename` | string | No | "" | Original filename, used for the download filename |
 
 **Response:**
@@ -331,6 +338,55 @@ curl -o stamped_contract.pdf \
 
 ---
 
+### Send Email
+
+Send the stamped PDF to configured recipients via Resend. Requires `RESEND_API_KEY` and `MAIL_TO` environment variables to be set.
+
+The email subject is auto-generated: `【合同 日期 甲方公司&乙方公司】`. Party names are extracted from the contract text during processing.
+
+```
+POST /api/v1/send-email
+Content-Type: application/json
+```
+
+**Request:**
+```json
+{
+  "task_id": "b3c4d5e6f7a8"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `task_id` | string | Yes | Task ID of a completed stamping job |
+
+**Response (success):**
+```json
+{
+  "ok": true,
+  "to": "koji1986@gmail.com, other@example.com"
+}
+```
+
+**Response (error):**
+```json
+{
+  "detail": "发送失败: ..."
+}
+```
+
+**Example:**
+```bash
+curl -X POST https://stamp.zeooo.cc/api/v1/send-email \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": "b3c4d5e6f7a8"}'
+```
+
+> **Note:** This endpoint only works after the task reaches `completed` status. The email is sent to the addresses configured in `MAIL_TO` (not user-specified).
+
+---
+
 ## Complete Workflow Example
 
 ```bash
@@ -392,6 +448,12 @@ done
 # 7. Download result
 curl -o stamped_contract.pdf "$API/api/v1/download/$TASK_ID" -H "$AUTH"
 echo "Downloaded: stamped_contract.pdf"
+
+# 8. (Optional) Send to email
+curl -s -X POST "$API/api/v1/send-email" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d "{\"task_id\": \"$TASK_ID\"}"
+echo "Email sent!"
 ```
 
 ---
